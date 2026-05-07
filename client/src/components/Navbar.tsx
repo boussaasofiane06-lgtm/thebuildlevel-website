@@ -1,0 +1,106 @@
+/* ==========================================================================
+   BUILD LEVEL — Navbar Component
+   Design: Sticky dark header, Oswald nav links, red CTA, mobile hamburger menu
+   ========================================================================== */
+
+import { useState, useEffect } from "react";
+import { Link, useLocation } from "wouter";
+import { Menu, X, ShoppingBag } from "lucide-react";
+
+const navLinks = [
+  { label: "Home", href: "/" },
+  { label: "Shop", href: "/shop" },
+  { label: "About", href: "/about" },
+  { label: "Contact", href: "/contact" },
+  { label: "FAQ", href: "/faq" },
+];
+
+export default function Navbar() {
+  const [scrolled, setScrolled] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [location] = useLocation();
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 40);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location]);
+
+  return (
+    <>
+      <header
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+          scrolled ? "bg-[#2A2A2A]/95 backdrop-blur-sm border-b border-white/5" : "bg-transparent"
+        }`}
+      >
+        <div className="max-w-[1280px] mx-auto px-6 lg:px-10 h-16 flex items-center justify-between">
+          {/* Logo */}
+          <Link href="/">
+            <span className="font-display text-xl font-bold tracking-[0.15em] text-white">
+              BUILD<span className="text-[#FF6B00]"> LEVEL</span>
+            </span>
+          </Link>
+
+          {/* Desktop Nav */}
+          <nav className="hidden md:flex items-center gap-8">
+            {navLinks.map((link) => (
+              <Link key={link.href} href={link.href}>
+                <span
+                  className={`nav-link text-[11px] ${
+                    location === link.href ? "text-[#FF6B00]" : ""
+                  }`}
+                >
+                  {link.label}
+                </span>
+              </Link>
+            ))}
+          </nav>
+
+          {/* Right actions */}
+          <div className="flex items-center gap-4">
+            <Link href="/shop">
+              <span className="hidden md:inline-flex btn-primary text-xs px-5 py-2.5">
+                Shop Now
+              </span>
+            </Link>
+            <button
+              className="md:hidden text-white"
+              onClick={() => setMenuOpen(!menuOpen)}
+              aria-label="Toggle menu"
+            >
+              {menuOpen ? <X size={22} /> : <Menu size={22} />}
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Mobile Menu */}
+      <div
+        className={`fixed inset-0 z-40 bg-[#2A2A2A] flex flex-col items-center justify-center transition-all duration-300 ${
+          menuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        }`}
+      >
+        <nav className="flex flex-col items-center gap-8">
+          {navLinks.map((link) => (
+            <Link key={link.href} href={link.href}>
+              <span className="font-display text-3xl font-bold tracking-widest text-white hover:text-[#FF6B00] transition-colors">
+                {link.label}
+              </span>
+            </Link>
+          ))}
+          <Link href="/shop">
+            <span className="btn-primary mt-4 text-sm">Shop Now</span>
+          </Link>
+        </nav>
+        <div className="absolute bottom-10 flex gap-6">
+          <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="text-[#888] hover:text-white transition-colors font-display text-xs tracking-widest">Instagram</a>
+          <a href="https://tiktok.com" target="_blank" rel="noopener noreferrer" className="text-[#888] hover:text-white transition-colors font-display text-xs tracking-widest">TikTok</a>
+        </div>
+      </div>
+    </>
+  );
+}
