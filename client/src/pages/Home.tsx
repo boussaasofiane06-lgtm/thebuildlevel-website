@@ -6,11 +6,12 @@
              Lifestyle Banner, Motivational Quotes, Social Proof, Email Signup
    ========================================================================== */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "wouter";
 import { Star, ChevronRight, ArrowRight } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { useCart } from "@/contexts/CartContext";
 
 const HERO_BG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663635005932/FqJozxCqZQ4nbgjqXYB8qi/hero_bg-85Hd3LDBKVBU2LrtwMCFr6.webp";
 const MISSION_BG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663635005932/FqJozxCqZQ4nbgjqXYB8qi/mission_bg-i2sEsXdD6nFhU7BzWs9sQC.webp";
@@ -23,7 +24,7 @@ const products = [
     id: 1,
     name: "Build Level Core Hoodie",
     category: "Hoodies",
-    price: "$89",
+    priceUSD: 89,
     image: PRODUCT_HOODIE,
     tag: "BEST SELLER",
     tagColor: "#FF6B00",
@@ -34,7 +35,7 @@ const products = [
     id: 2,
     name: "Execute Daily Tee",
     category: "T-Shirts",
-    price: "$45",
+    priceUSD: 45,
     image: PRODUCT_TSHIRT,
     tag: "NEW DROP",
     tagColor: "#FF6B00",
@@ -45,7 +46,7 @@ const products = [
     id: 3,
     name: "Discipline Heavyweight Hoodie",
     category: "Hoodies",
-    price: "$95",
+    priceUSD: 95,
     image: PRODUCT_HOODIE,
     tag: "LIMITED",
     tagColor: "#FF6B00",
@@ -56,7 +57,7 @@ const products = [
     id: 4,
     name: "Built Different Tee",
     category: "T-Shirts",
-    price: "$42",
+    priceUSD: 42,
     image: PRODUCT_TSHIRT,
     tag: null,
     tagColor: "",
@@ -116,6 +117,7 @@ function useScrollReveal() {
 }
 
 export default function Home() {
+  const { addItem, openCart, convertPrice } = useCart();
   useScrollReveal();
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
@@ -263,7 +265,7 @@ export default function Home() {
                   </h3>
                   <div className="flex items-center justify-between">
                     <span className="font-display text-base font-bold text-[#FF6B00]">
-                      {product.price}
+                      {convertPrice(product.priceUSD)}
                     </span>
                     <div className="flex items-center gap-1">
                       <Star size={10} fill="#FF6B00" stroke="none" />
@@ -366,8 +368,8 @@ export default function Home() {
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="font-display text-xl font-bold text-[#FF6B00]">{product.price}</span>
-                    <button className="btn-primary text-xs px-5 py-2.5">ADD TO CART</button>
+                    <span className="font-display text-xl font-bold text-[#FF6B00]">{convertPrice(product.priceUSD)}</span>
+                    <button onClick={() => addItem({ id: product.id, name: product.name, category: product.category, priceUSD: product.priceUSD, image: product.image, size: 'M' })} className="btn-primary text-xs px-5 py-2.5">ADD TO CART</button>
                   </div>
                 </div>
               </div>

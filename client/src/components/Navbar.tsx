@@ -1,11 +1,13 @@
 /* ==========================================================================
    BUILD LEVEL — Navbar Component
-   Design: Sticky dark header, Oswald nav links, red CTA, mobile hamburger menu
+   Design: Sticky dark header, Oswald nav links, orange CTA, mobile hamburger menu
    ========================================================================== */
 
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { Menu, X, ShoppingBag } from "lucide-react";
+import { useCart } from "@/contexts/CartContext";
+import CartDrawer from "./CartDrawer";
 
 const navLinks = [
   { label: "Home", href: "/" },
@@ -19,6 +21,7 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [location] = useLocation();
+  const { totalItems, openCart } = useCart();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 40);
@@ -62,6 +65,20 @@ export default function Navbar() {
 
           {/* Right actions */}
           <div className="flex items-center gap-4">
+            {/* Cart Icon */}
+            <button
+              onClick={openCart}
+              className="relative text-white hover:text-[#FF6B00] transition-colors"
+              aria-label="Open cart"
+            >
+              <ShoppingBag size={22} />
+              {totalItems > 0 && (
+                <span className="absolute -top-2 -right-2 bg-[#FF6B00] text-white text-[9px] font-display font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                  {totalItems > 9 ? "9+" : totalItems}
+                </span>
+              )}
+            </button>
+
             <Link href="/shop">
               <span className="hidden md:inline-flex btn-primary text-xs px-5 py-2.5">
                 Shop Now
@@ -101,6 +118,9 @@ export default function Navbar() {
           <a href="https://tiktok.com" target="_blank" rel="noopener noreferrer" className="text-[#888] hover:text-white transition-colors font-display text-xs tracking-widest">TikTok</a>
         </div>
       </div>
+
+      {/* Cart Drawer */}
+      <CartDrawer />
     </>
   );
 }

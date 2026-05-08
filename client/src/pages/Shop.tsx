@@ -1,43 +1,60 @@
 /* ==========================================================================
    BUILD LEVEL — Shop Page
    Design: Dark Luxury Editorial — product grid with category filters,
-   hover effects, size selection, add to cart
+   size selection, add to cart with CartContext integration
    ========================================================================== */
 
 import { useState, useEffect } from "react";
-import { Star, Filter, X } from "lucide-react";
+import { Star, Filter, ShoppingBag } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { useCart } from "@/contexts/CartContext";
+import { toast } from "sonner";
 
 const PRODUCT_HOODIE = "https://d2xsxph8kpxj0f.cloudfront.net/310519663635005932/FqJozxCqZQ4nbgjqXYB8qi/product_hoodie-mooq7Qw4za8hLYwwYeQdR6.webp";
 const PRODUCT_TSHIRT = "https://d2xsxph8kpxj0f.cloudfront.net/310519663635005932/FqJozxCqZQ4nbgjqXYB8qi/product_tshirt-ZUmrE26ymPLdjN4UWhFo7C.webp";
 
 const allProducts = [
-  { id: 1, name: "Build Level Core Hoodie", category: "Hoodies", price: "$89", image: PRODUCT_HOODIE, tag: "BEST SELLER", tagColor: "#FF6B00", reviews: 4.9, reviewCount: 214 },
-  { id: 2, name: "Execute Daily Tee", category: "T-Shirts", price: "$45", image: PRODUCT_TSHIRT, tag: "NEW DROP", tagColor: "#FF6B00", reviews: 4.8, reviewCount: 98 },
-  { id: 3, name: "Discipline Heavyweight Hoodie", category: "Hoodies", price: "$95", image: PRODUCT_HOODIE, tag: "LIMITED", tagColor: "#FF6B00", reviews: 5.0, reviewCount: 67 },
-  { id: 4, name: "Built Different Tee", category: "T-Shirts", price: "$42", image: PRODUCT_TSHIRT, tag: null, tagColor: "", reviews: 4.7, reviewCount: 143 },
-  { id: 5, name: "Focus Snapback Hat", category: "Hats", price: "$38", image: PRODUCT_TSHIRT, tag: null, tagColor: "", reviews: 4.6, reviewCount: 55 },
-  { id: 6, name: "Lock In Trucker Cap", category: "Hats", price: "$35", image: PRODUCT_TSHIRT, tag: "NEW DROP", tagColor: "#FF6B00", reviews: 4.8, reviewCount: 32 },
-  { id: 7, name: "Execute Wristband Set", category: "Accessories", price: "$18", image: PRODUCT_HOODIE, tag: null, tagColor: "", reviews: 4.9, reviewCount: 189 },
-  { id: 8, name: "Build Level Tote Bag", category: "Accessories", price: "$28", image: PRODUCT_HOODIE, tag: null, tagColor: "", reviews: 4.7, reviewCount: 76 },
+  { id: 1, name: "Build Level Core Hoodie", category: "Hoodies", priceUSD: 89, image: PRODUCT_HOODIE, tag: "BEST SELLER", tagColor: "#FF6B00", reviews: 4.9, reviewCount: 214 },
+  { id: 2, name: "Execute Daily Tee", category: "T-Shirts", priceUSD: 45, image: PRODUCT_TSHIRT, tag: "NEW DROP", tagColor: "#FF6B00", reviews: 4.8, reviewCount: 98 },
+  { id: 3, name: "Discipline Heavyweight Hoodie", category: "Hoodies", priceUSD: 95, image: PRODUCT_HOODIE, tag: "LIMITED", tagColor: "#FF6B00", reviews: 5.0, reviewCount: 67 },
+  { id: 4, name: "Built Different Tee", category: "T-Shirts", priceUSD: 42, image: PRODUCT_TSHIRT, tag: null, tagColor: "", reviews: 4.7, reviewCount: 143 },
+  { id: 5, name: "Focus Snapback Hat", category: "Hats", priceUSD: 38, image: PRODUCT_TSHIRT, tag: null, tagColor: "", reviews: 4.6, reviewCount: 55 },
+  { id: 6, name: "Lock In Trucker Cap", category: "Hats", priceUSD: 35, image: PRODUCT_TSHIRT, tag: "NEW DROP", tagColor: "#FF6B00", reviews: 4.8, reviewCount: 32 },
+  { id: 7, name: "Execute Wristband Set", category: "Accessories", priceUSD: 18, image: PRODUCT_HOODIE, tag: null, tagColor: "", reviews: 4.9, reviewCount: 189 },
+  { id: 8, name: "Build Level Tote Bag", category: "Accessories", priceUSD: 28, image: PRODUCT_HOODIE, tag: null, tagColor: "", reviews: 4.7, reviewCount: 76 },
 ];
 
 const categories = ["All", "Hoodies", "T-Shirts", "Hats", "Accessories"];
+const SIZES = ["S", "M", "L", "XL", "XXL"];
 
 export default function Shop() {
   const [activeCategory, setActiveCategory] = useState("All");
-  const [cartCount, setCartCount] = useState(0);
-  const [addedId, setAddedId] = useState<number | null>(null);
+  const [selectedSizes, setSelectedSizes] = useState<Record<number, string>>({});
+  const { addItem, convertPrice, openCart } = useCart();
 
   const filtered = activeCategory === "All"
     ? allProducts
     : allProducts.filter((p) => p.category === activeCategory);
 
-  const handleAddToCart = (id: number) => {
-    setCartCount((c) => c + 1);
-    setAddedId(id);
-    setTimeout(() => setAddedId(null), 1500);
+  const handleSizeSelect = (productId: number, size: string) => {
+    setSelectedSizes((prev) => ({ ...prev, [productId]: size }));
+  };
+
+  const handleAddToCart = (product: typeof allProducts[0]) => {
+    const size = selectedSizes[product.id] || "M";
+    addItem({
+      id: product.id,
+      name: product.name,
+      category: product.category,
+      priceUSD: product.priceUSD,
+      image: product.image,
+      size,
+    });
+    toast.success(`${product.name} (${size}) added to cart`, {
+      description: "View your cart to checkout",
+      action: { label: "View Cart", onClick: openCart },
+    });
   };
 
   useEffect(() => {
@@ -83,13 +100,6 @@ export default function Shop() {
               {cat}
             </button>
           ))}
-          {cartCount > 0 && (
-            <div className="ml-auto flex-shrink-0 flex items-center gap-2 bg-[#FF6B00] px-4 py-2">
-              <span className="font-display text-xs tracking-widest text-white">
-                CART ({cartCount})
-              </span>
-            </div>
-          )}
         </div>
       </div>
 
@@ -122,10 +132,11 @@ export default function Shop() {
                 </div>
                 <div className="product-overlay">
                   <button
-                    onClick={() => handleAddToCart(product.id)}
-                    className="btn-primary text-xs px-6 py-3"
+                    onClick={() => handleAddToCart(product)}
+                    className="btn-primary text-xs px-6 py-3 flex items-center gap-2"
                   >
-                    {addedId === product.id ? "ADDED!" : "ADD TO CART"}
+                    <ShoppingBag size={12} />
+                    ADD TO CART
                   </button>
                 </div>
                 <div className="p-4">
@@ -135,11 +146,17 @@ export default function Shop() {
                   <h3 className="font-display text-sm font-semibold text-white mb-2">
                     {product.name}
                   </h3>
-                  <div className="flex gap-1 mb-3">
-                    {["S", "M", "L", "XL"].map((size) => (
+                  {/* Size selector */}
+                  <div className="flex gap-1 mb-3 flex-wrap">
+                    {SIZES.map((size) => (
                       <button
                         key={size}
-                        className="w-7 h-7 border border-white/15 font-display text-[9px] text-[#666] hover:border-[#FF6B00] hover:text-white transition-all"
+                        onClick={() => handleSizeSelect(product.id, size)}
+                        className={`w-7 h-7 border font-display text-[9px] transition-all ${
+                          selectedSizes[product.id] === size
+                            ? "border-[#FF6B00] text-[#FF6B00]"
+                            : "border-white/15 text-[#666] hover:border-[#FF6B00] hover:text-white"
+                        }`}
                       >
                         {size}
                       </button>
@@ -147,7 +164,7 @@ export default function Shop() {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="font-display text-base font-bold text-[#FF6B00]">
-                      {product.price}
+                      {convertPrice(product.priceUSD)}
                     </span>
                     <div className="flex items-center gap-1">
                       <Star size={10} fill="#FF6B00" stroke="none" />

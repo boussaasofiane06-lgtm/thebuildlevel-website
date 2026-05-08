@@ -260,6 +260,27 @@
     opacity: 1;
     transform: translateY(0);
   }
+  .checkout-input {
+    width: 100%;
+    background-color: #333333;
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #F5F5F0;
+    padding: 0.75rem 1rem;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.875rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .checkout-input:focus {
+    border-color: #FF6B00;
+  }
+  .checkout-input::placeholder {
+    color: #666;
+  }
+  .checkout-input option {
+    background-color: #333333;
+    color: #F5F5F0;
+  }
 }
 
 /* Scrollbar */
