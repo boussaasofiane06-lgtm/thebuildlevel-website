@@ -35,3 +35,8 @@
 - [x] Owner alert when a new order is placed
 - [x] Owner alert when a new email signup occurs
 - [x] Customer order confirmation notification on checkout success
+
+## AI Customer Service Chat Widget
+- [x] Build AI chat backend tRPC procedure with BUILD LEVEL knowledge base
+- [x] Build branded chat widget UI (dark theme, orange accents, bottom-right bubble)
+- [x] Wire chat widget globally across all pages

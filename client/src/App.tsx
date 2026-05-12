@@ -14,6 +14,7 @@ import Checkout from "./pages/Checkout";
 import OrderConfirmation from "./pages/OrderConfirmation";
 import Integrations from "./pages/Integrations";
 import SocialProofNotification from "./components/SocialProofNotification";
+import ChatWidget from "./components/ChatWidget";
 
 function Router() {
   return (
@@ -40,6 +41,7 @@ function App() {
           <TooltipProvider>
             <Toaster />
             <SocialProofNotification />
+            <ChatWidget />
             <Router />
           </TooltipProvider>
         </CartProvider>

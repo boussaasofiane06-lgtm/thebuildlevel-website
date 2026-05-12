@@ -5,6 +5,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { notifyOwner } from "./_core/notification";
+import { invokeLLM } from "./_core/llm";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
   apiVersion: "2026-04-22.dahlia",
@@ -108,6 +109,41 @@ export const appRouter = router({
       }),
   }),
 
+  chat: router({
+    message: publicProcedure
+      .input(z.object({
+        messages: z.array(z.object({
+          role: z.enum(["user", "assistant"]),
+          content: z.string(),
+        })),
+      }))
+      .mutation(async ({ input }) => {
+        const systemPrompt = `You are the BUILD LEVEL customer service assistant. BUILD LEVEL is a premium motivational streetwear brand built on the principles of Discipline, Focus, and Execution.
+
+You help customers with:
+- Shipping: Standard shipping takes 5-10 business days worldwide. Express shipping (2-3 business days) is available for $19.99. Free standard shipping on orders over $100.
+- Returns: 30-day return policy. Items must be unworn, unwashed, and in original condition with tags attached. Contact info@buildlevel.com to initiate a return.
+- Sizing: We recommend sizing up if you're between sizes. Hoodies run true to size. T-shirts have a slim fit. Size chart is available on each product page.
+- Products: We sell hoodies, t-shirts, hats, and accessories. All products feature motivational BUILD LEVEL branding.
+- Payment: We accept all major credit/debit cards, Apple Pay, Google Pay, PayPal, Klarna, and Afterpay.
+- Order tracking: After your order ships, you'll receive a tracking email from our fulfillment partner.
+- Contact: Email info@buildlevel.com or use the contact form on the website.
+
+Keep responses concise, helpful, and on-brand. Use the BUILD LEVEL tone: direct, motivational, and professional. Never make up information. If you don't know something, direct them to email info@buildlevel.com.`;
+
+        const response = await invokeLLM({
+          messages: [
+            { role: "system", content: systemPrompt },
+            ...input.messages.map((m) => ({ role: m.role, content: m.content })),
+          ],
+        });
+
+        const rawContent = response.choices?.[0]?.message?.content;
+        const content = typeof rawContent === "string" ? rawContent : "I'm here to help! Please email info@buildlevel.com for further assistance.";
+        return { reply: content };
+      }),
+  }),
+
   notifications: router({
     // Owner alert when someone signs up to the email list
     emailSignup: publicProcedure
@@ -138,3 +174,4 @@ export const appRouter = router({
 });
 
 export type AppRouter = typeof appRouter;
+
