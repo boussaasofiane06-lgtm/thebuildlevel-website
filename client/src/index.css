@@ -160,14 +160,7 @@
   }
 
   /* BUILD LEVEL brand utilities */
-  .font-display {
-    font-family: 'Oswald', sans-serif;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
-  }
-  .font-body {
-    font-family: 'DM Sans', sans-serif;
-  }
+  /* font-display and font-body are registered as @utility above */
 
   .btn-primary {
     display: inline-flex;
