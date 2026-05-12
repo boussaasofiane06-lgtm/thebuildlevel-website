@@ -15,6 +15,7 @@ import OrderConfirmation from "./pages/OrderConfirmation";
 import Integrations from "./pages/Integrations";
 import SocialProofNotification from "./components/SocialProofNotification";
 import ChatWidget from "./components/ChatWidget";
+import PWAInstallPrompt from "./components/PWAInstallPrompt";
 
 function Router() {
   return (
@@ -42,6 +43,7 @@ function App() {
             <Toaster />
             <SocialProofNotification />
             <ChatWidget />
+            <PWAInstallPrompt />
             <Router />
           </TooltipProvider>
         </CartProvider>

@@ -40,3 +40,10 @@
 - [x] Build AI chat backend tRPC procedure with BUILD LEVEL knowledge base
 - [x] Build branded chat widget UI (dark theme, orange accents, bottom-right bubble)
 - [x] Wire chat widget globally across all pages
+
+## PWA (Progressive Web App)
+- [x] Create web app manifest (manifest.json) with BUILD LEVEL branding
+- [x] Generate PWA icons (192x192 and 512x512)
+- [x] Create service worker for offline support
+- [x] Add install prompt banner for mobile users
+- [x] Wire manifest and service worker into index.html
