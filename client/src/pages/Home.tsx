@@ -12,6 +12,7 @@ import { Star, ChevronRight, ArrowRight } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useCart } from "@/contexts/CartContext";
+import { trpc } from "@/lib/trpc";
 
 const HERO_BG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663635005932/FqJozxCqZQ4nbgjqXYB8qi/hero_bg-85Hd3LDBKVBU2LrtwMCFr6.webp";
 const MISSION_BG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663635005932/FqJozxCqZQ4nbgjqXYB8qi/mission_bg-i2sEsXdD6nFhU7BzWs9sQC.webp";
@@ -121,6 +122,7 @@ export default function Home() {
   useScrollReveal();
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const emailSignup = trpc.notifications.emailSignup.useMutation();
   const [countdown, setCountdown] = useState({ h: 11, m: 47, s: 32 });
 
   useEffect(() => {
@@ -139,7 +141,10 @@ export default function Home() {
 
   const handleEmailSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (email) setSubmitted(true);
+    if (email) {
+      setSubmitted(true);
+      emailSignup.mutate({ email });
+    }
   };
 
   const pad = (n: number) => String(n).padStart(2, "0");

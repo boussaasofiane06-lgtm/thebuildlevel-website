@@ -7,10 +7,12 @@ import { useState, useEffect } from "react";
 import { Instagram, Mail, Send } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { trpc } from "@/lib/trpc";
 
 export default function Contact() {
   const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" });
   const [submitted, setSubmitted] = useState(false);
+  const contactNotify = trpc.notifications.contactForm.useMutation();
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -24,6 +26,11 @@ export default function Contact() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitted(true);
+    contactNotify.mutate({
+      name: form.name,
+      email: form.email,
+      message: `Subject: ${form.subject}\n\n${form.message}`,
+    });
   };
 
   const inputClass = "w-full bg-[#404040] border border-white/10 text-white placeholder-[#555] px-5 py-4 font-body text-sm outline-none focus:border-[#FF6B00] transition-colors";

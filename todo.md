@@ -27,3 +27,11 @@
 - [x] Add Shopify Buy Button support (Integrations page with full setup guide — user must connect their Shopify store)
 - [x] Add Integrations page explaining Shopify + Printify setup workflow
 - [x] Add integrations status section on Home page (Partners section linking to /integrations)
+
+## Custom Notifications
+- [x] Site visitor social proof pop-ups (e.g. "Someone just bought a hoodie")
+- [x] Stock alert notifications (e.g. "Only 3 left in stock!")
+- [x] Announcement banner (e.g. new drop, sale, free shipping)
+- [x] Owner alert when a new order is placed
+- [x] Owner alert when a new email signup occurs
+- [x] Customer order confirmation notification on checkout success

@@ -3,18 +3,26 @@
    ========================================================================== */
 
 import { useEffect } from "react";
-import { Link } from "wouter";
+import { Link, useSearch } from "wouter";
 import { CheckCircle, Package, Truck, Mail } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useCart } from "@/contexts/CartContext";
+import { toast } from "sonner";
 
 export default function OrderConfirmation() {
   const { clearCart } = useCart();
+  const search = useSearch();
+  const sessionId = new URLSearchParams(search).get("session_id");
 
   useEffect(() => {
     // Clear cart after successful order
     clearCart();
+    // Show customer confirmation toast
+    toast.success("Order confirmed! Check your email for receipt.", {
+      duration: 8000,
+      description: sessionId ? `Reference: ${sessionId.slice(-8).toUpperCase()}` : "Your BUILD LEVEL gear is on its way!",
+    });
   }, []);
 
   return (

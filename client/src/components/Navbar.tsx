@@ -8,6 +8,7 @@ import { Link, useLocation } from "wouter";
 import { Menu, X, ShoppingBag } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import CartDrawer from "./CartDrawer";
+import AnnouncementBanner from "./AnnouncementBanner";
 
 const navLinks = [
   { label: "Home", href: "/" },
@@ -35,8 +36,11 @@ export default function Navbar() {
 
   return (
     <>
+      <div className="fixed top-0 left-0 right-0 z-[60]">
+        <AnnouncementBanner />
+      </div>
       <header
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        className={`fixed left-0 right-0 z-50 transition-all duration-300 ${scrolled ? "top-0" : "top-[38px]"} ${
           scrolled ? "bg-[#2A2A2A]/95 backdrop-blur-sm border-b border-white/5" : "bg-transparent"
         }`}
       >

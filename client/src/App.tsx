@@ -13,6 +13,7 @@ import FAQ from "./pages/FAQ";
 import Checkout from "./pages/Checkout";
 import OrderConfirmation from "./pages/OrderConfirmation";
 import Integrations from "./pages/Integrations";
+import SocialProofNotification from "./components/SocialProofNotification";
 
 function Router() {
   return (
@@ -38,6 +39,7 @@ function App() {
         <CartProvider>
           <TooltipProvider>
             <Toaster />
+            <SocialProofNotification />
             <Router />
           </TooltipProvider>
         </CartProvider>

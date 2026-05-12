@@ -4,6 +4,7 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
+import { notifyOwner } from "./_core/notification";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
   apiVersion: "2026-04-22.dahlia",
@@ -91,7 +92,47 @@ export const appRouter = router({
           },
         });
 
+        // Notify owner of new order
+        const itemSummary = input.items
+          .map((i) => `${i.quantity}x ${i.name}`)
+          .join(", ");
+        const total = input.items
+          .reduce((sum, i) => sum + i.priceUSD * i.quantity, 0)
+          .toFixed(2);
+        await notifyOwner({
+          title: "🛒 New Order Placed — BUILD LEVEL",
+          content: `A new order was placed on your store.\n\nItems: ${itemSummary}\nTotal: $${total} ${input.currency.toUpperCase()}\nCustomer: ${input.customerEmail || "Guest"}`,
+        }).catch(() => {/* non-blocking */});
+
         return { url: session.url, sessionId: session.id };
+      }),
+  }),
+
+  notifications: router({
+    // Owner alert when someone signs up to the email list
+    emailSignup: publicProcedure
+      .input(z.object({ email: z.string().email() }))
+      .mutation(async ({ input }) => {
+        await notifyOwner({
+          title: "📧 New Email Signup — BUILD LEVEL",
+          content: `A new subscriber joined your email list.\n\nEmail: ${input.email}\nTime: ${new Date().toUTCString()}`,
+        }).catch(() => {/* non-blocking */});
+        return { success: true };
+      }),
+
+    // Owner alert when contact form is submitted
+    contactForm: publicProcedure
+      .input(z.object({
+        name: z.string(),
+        email: z.string().email(),
+        message: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        await notifyOwner({
+          title: `📬 New Contact Form — ${input.name}`,
+          content: `Name: ${input.name}\nEmail: ${input.email}\n\nMessage:\n${input.message}`,
+        }).catch(() => {/* non-blocking */});
+        return { success: true };
       }),
   }),
 });
