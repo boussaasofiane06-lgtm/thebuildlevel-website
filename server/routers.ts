@@ -1,11 +1,15 @@
 import Stripe from "stripe";
 import { z } from "zod";
+import { asc } from "drizzle-orm";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { notifyOwner } from "./_core/notification";
 import { invokeLLM } from "./_core/llm";
+import { adminRouter } from "./admin";
+import { getDb } from "./db";
+import { products } from "../drizzle/schema";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
   apiVersion: "2026-04-22.dahlia",
@@ -143,6 +147,34 @@ Keep responses concise, helpful, and on-brand. Use the BUILD LEVEL tone: direct,
         return { reply: content };
       }),
   }),
+
+  // Public product listing (used by Shop and Home pages)
+  products: router({
+    list: publicProcedure
+      .input(z.object({
+        category: z.string().optional(),
+        featuredOnly: z.boolean().optional(),
+      }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+        const rows = await db
+          .select()
+          .from(products)
+          .orderBy(asc(products.sortOrder), asc(products.createdAt));
+        return rows
+          .filter((p) => p.inStock !== false)
+          .filter((p) => !input.category || p.category === input.category)
+          .filter((p) => !input.featuredOnly || p.featured === true)
+          .map((p) => ({
+            ...p,
+            price: parseFloat(String(p.price)),
+            compareAtPrice: p.compareAtPrice ? parseFloat(String(p.compareAtPrice)) : null,
+          }));
+      }),
+  }),
+
+  admin: adminRouter,
 
   notifications: router({
     // Owner alert when someone signs up to the email list

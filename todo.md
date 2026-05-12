@@ -47,3 +47,12 @@
 - [x] Create service worker for offline support
 - [x] Add install prompt banner for mobile users
 - [x] Wire manifest and service worker into index.html
+
+## Admin Panel
+- [x] Add products table and site_settings table to database schema
+- [x] Run db:push migration (tables created via SQL)
+- [x] Build admin tRPC procedures (product CRUD, settings, image upload)
+- [x] Build Admin Panel UI (product list, add/edit/delete, image upload, settings page)
+- [x] Add admin-only route protection (only owner can access /admin)
+- [x] Wire Shop and Home pages to load products from database
+- [x] Ensure Shopify/Printify webhook endpoints are compatible (no conflicts)

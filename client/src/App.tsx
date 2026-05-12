@@ -13,6 +13,7 @@ import FAQ from "./pages/FAQ";
 import Checkout from "./pages/Checkout";
 import OrderConfirmation from "./pages/OrderConfirmation";
 import Integrations from "./pages/Integrations";
+import Admin from "./pages/Admin";
 import SocialProofNotification from "./components/SocialProofNotification";
 import ChatWidget from "./components/ChatWidget";
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
@@ -28,6 +29,7 @@ function Router() {
       <Route path="/checkout" component={Checkout} />
       <Route path="/order-confirmation" component={OrderConfirmation} />
       <Route path="/integrations" component={Integrations} />
+      <Route path="/admin" component={Admin} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

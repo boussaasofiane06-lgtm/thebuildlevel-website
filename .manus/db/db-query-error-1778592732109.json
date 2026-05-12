@@ -1,0 +1,18 @@
+{
+  "query": "\nCREATE TABLE IF NOT EXISTS `products` (\n  `id` int AUTO_INCREMENT NOT NULL,\n  `name` varchar(255) NOT NULL,\n  `description` text,\n  `price` decimal(10,2) NOT NULL,\n  `compareAtPrice` decimal(10,2),\n  `category` varchar(64) NOT NULL DEFAULT 'apparel',\n  `sizes` json NOT NULL DEFAULT ('[\"S\",\"M\",\"L\",\"XL\",\"XXL\"]'),\n  `imageUrl` text,\n  `badge` varchar(64),\n  `inStock` boolean NOT NULL DEFAULT true,\n  `featured` boolean NOT NULL DEFAULT false,\n  `sortOrder` int NOT NULL DEFAULT 0,\n  `shopifyVariantId` varchar(128),\n  `shopifyProductId` varchar(128),\n  `printifyProductId` varchar(128),\n  `createdAt` timestamp NOT NULL DEFAULT (now()),\n  `updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,\n  CONSTRAINT `products_id` PRIMARY KEY(`id`)\n);\n\nCREATE TABLE IF NOT EXISTS `site_settings` (\n  `id` int AUTO_INCREMENT NOT NULL,\n  `key` varchar(128) NOT NULL,\n  `value` text,\n  `updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,\n  CONSTRAINT `site_settings_id` PRIMARY KEY(`id`),\n  CONSTRAINT `site_settings_key_unique` UNIQUE(`key`)\n);\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway06.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3yjy74Aq4fSfMvH.root --database ZpCxvttgRWUJYjQSvWcg6k --execute \nCREATE TABLE IF NOT EXISTS `products` (\n  `id` int AUTO_INCREMENT NOT NULL,\n  `name` varchar(255) NOT NULL,\n  `description` text,\n  `price` decimal(10,2) NOT NULL,\n  `compareAtPrice` decimal(10,2),\n  `category` varchar(64) NOT NULL DEFAULT 'apparel',\n  `sizes` json NOT NULL DEFAULT ('[\"S\",\"M\",\"L\",\"XL\",\"XXL\"]'),\n  `imageUrl` text,\n  `badge` varchar(64),\n  `inStock` boolean NOT NULL DEFAULT true,\n  `featured` boolean NOT NULL DEFAULT false,\n  `sortOrder` int NOT NULL DEFAULT 0,\n  `shopifyVariantId` varchar(128),\n  `shopifyProductId` varchar(128),\n  `printifyProductId` varchar(128),\n  `createdAt` timestamp NOT NULL DEFAULT (now()),\n  `updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,\n  CONSTRAINT `products_id` PRIMARY KEY(`id`)\n);\n\nCREATE TABLE IF NOT EXISTS `site_settings` (\n  `id` int AUTO_INCREMENT NOT NULL,\n  `key` varchar(128) NOT NULL,\n  `value` text,\n  `updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,\n  CONSTRAINT `site_settings_id` PRIMARY KEY(`id`),\n  CONSTRAINT `site_settings_key_unique` UNIQUE(`key`)\n);\n",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1064 (42000) at line 2: You have an error in your SQL syntax; check the manual that corresponds to your TiDB version for the right syntax to use line 8 column 60 near \"'[\"S\",\"M\",\"L\",\"XL\",\"XXL\"]'),",
+    "  `imageUrl` text,",
+    "  `badge` varchar(64),",
+    "  `inStock` boolean NOT NULL DEFAULT true,",
+    "  `featured` boolean NOT NULL DEFAULT false,",
+    "  `sortOrder` int NOT NULL DEFAULT 0,",
+    "  `shopifyVariantId` varchar(128),",
+    "  `shopifyProductId` varchar(128),",
+    "  `printifyProductId` varchar(128),",
+    "  `createdAt` timestamp NOT NULL DEFAULT (now()),",
+    "  `updatedAt`"
+  ]
+}

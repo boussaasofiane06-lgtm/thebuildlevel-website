@@ -5,24 +5,25 @@
    ========================================================================== */
 
 import { useState, useEffect } from "react";
-import { Star, Filter, ShoppingBag } from "lucide-react";
+import { Star, Filter, ShoppingBag, Loader2 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useCart } from "@/contexts/CartContext";
+import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
 const PRODUCT_HOODIE = "https://d2xsxph8kpxj0f.cloudfront.net/310519663635005932/FqJozxCqZQ4nbgjqXYB8qi/product_hoodie-mooq7Qw4za8hLYwwYeQdR6.webp";
 const PRODUCT_TSHIRT = "https://d2xsxph8kpxj0f.cloudfront.net/310519663635005932/FqJozxCqZQ4nbgjqXYB8qi/product_tshirt-ZUmrE26ymPLdjN4UWhFo7C.webp";
 
-const allProducts = [
-  { id: 1, name: "Build Level Core Hoodie", category: "Hoodies", priceUSD: 89, image: PRODUCT_HOODIE, tag: "BEST SELLER", tagColor: "#FF6B00", reviews: 4.9, reviewCount: 214 },
-  { id: 2, name: "Execute Daily Tee", category: "T-Shirts", priceUSD: 45, image: PRODUCT_TSHIRT, tag: "NEW DROP", tagColor: "#FF6B00", reviews: 4.8, reviewCount: 98 },
-  { id: 3, name: "Discipline Heavyweight Hoodie", category: "Hoodies", priceUSD: 95, image: PRODUCT_HOODIE, tag: "LIMITED", tagColor: "#FF6B00", reviews: 5.0, reviewCount: 67 },
-  { id: 4, name: "Built Different Tee", category: "T-Shirts", priceUSD: 42, image: PRODUCT_TSHIRT, tag: null, tagColor: "", reviews: 4.7, reviewCount: 143 },
-  { id: 5, name: "Focus Snapback Hat", category: "Hats", priceUSD: 38, image: PRODUCT_TSHIRT, tag: null, tagColor: "", reviews: 4.6, reviewCount: 55 },
-  { id: 6, name: "Lock In Trucker Cap", category: "Hats", priceUSD: 35, image: PRODUCT_TSHIRT, tag: "NEW DROP", tagColor: "#FF6B00", reviews: 4.8, reviewCount: 32 },
-  { id: 7, name: "Execute Wristband Set", category: "Accessories", priceUSD: 18, image: PRODUCT_HOODIE, tag: null, tagColor: "", reviews: 4.9, reviewCount: 189 },
-  { id: 8, name: "Build Level Tote Bag", category: "Accessories", priceUSD: 28, image: PRODUCT_HOODIE, tag: null, tagColor: "", reviews: 4.7, reviewCount: 76 },
+const FALLBACK_PRODUCTS = [
+  { id: 1, name: "Build Level Core Hoodie", category: "hoodies", price: 89, imageUrl: PRODUCT_HOODIE, badge: "BEST SELLER", sizes: ["S","M","L","XL","XXL"], inStock: true, featured: true, compareAtPrice: null },
+  { id: 2, name: "Execute Daily Tee", category: "t-shirts", price: 45, imageUrl: PRODUCT_TSHIRT, badge: "NEW DROP", sizes: ["S","M","L","XL","XXL"], inStock: true, featured: false, compareAtPrice: null },
+  { id: 3, name: "Discipline Heavyweight Hoodie", category: "hoodies", price: 95, imageUrl: PRODUCT_HOODIE, badge: "LIMITED", sizes: ["S","M","L","XL","XXL"], inStock: true, featured: true, compareAtPrice: null },
+  { id: 4, name: "Built Different Tee", category: "t-shirts", price: 42, imageUrl: PRODUCT_TSHIRT, badge: null, sizes: ["S","M","L","XL","XXL"], inStock: true, featured: false, compareAtPrice: null },
+  { id: 5, name: "Focus Snapback Hat", category: "hats", price: 38, imageUrl: PRODUCT_TSHIRT, badge: null, sizes: ["S","M","L","XL","XXL"], inStock: true, featured: false, compareAtPrice: null },
+  { id: 6, name: "Lock In Trucker Cap", category: "hats", price: 35, imageUrl: PRODUCT_TSHIRT, badge: "NEW DROP", sizes: ["S","M","L","XL","XXL"], inStock: true, featured: false, compareAtPrice: null },
+  { id: 7, name: "Execute Wristband Set", category: "accessories", price: 18, imageUrl: PRODUCT_HOODIE, badge: null, sizes: ["One Size"], inStock: true, featured: false, compareAtPrice: null },
+  { id: 8, name: "Build Level Tote Bag", category: "accessories", price: 28, imageUrl: PRODUCT_HOODIE, badge: null, sizes: ["One Size"], inStock: true, featured: false, compareAtPrice: null },
 ];
 
 const categories = ["All", "Hoodies", "T-Shirts", "Hats", "Accessories"];
@@ -33,22 +34,28 @@ export default function Shop() {
   const [selectedSizes, setSelectedSizes] = useState<Record<number, string>>({});
   const { addItem, convertPrice, openCart } = useCart();
 
+  const { data: dbProducts, isLoading: productsLoading } = trpc.products.list.useQuery({});
+
+  // Use DB products if available, otherwise fall back to hardcoded
+  const allProducts = (dbProducts && dbProducts.length > 0) ? dbProducts : FALLBACK_PRODUCTS;
+
   const filtered = activeCategory === "All"
     ? allProducts
-    : allProducts.filter((p) => p.category === activeCategory);
+    : allProducts.filter((p) => p.category.toLowerCase() === activeCategory.toLowerCase());
 
   const handleSizeSelect = (productId: number, size: string) => {
     setSelectedSizes((prev) => ({ ...prev, [productId]: size }));
   };
 
   const handleAddToCart = (product: typeof allProducts[0]) => {
-    const size = selectedSizes[product.id] || "M";
+    const productSizes = (product.sizes as string[]) || SIZES;
+    const size = selectedSizes[product.id] || productSizes[0] || "M";
     addItem({
       id: product.id,
       name: product.name,
       category: product.category,
-      priceUSD: product.priceUSD,
-      image: product.image,
+      priceUSD: product.price,
+      image: product.imageUrl || "",
       size,
     });
     toast.success(`${product.name} (${size}) added to cart`, {
@@ -113,19 +120,16 @@ export default function Shop() {
                 className="product-card scroll-reveal"
                 style={{ transitionDelay: `${i * 0.05}s` }}
               >
-                {product.tag && (
-                  <div
-                    className="absolute top-3 left-3 z-10 px-3 py-1"
-                    style={{ backgroundColor: product.tagColor }}
-                  >
+                {product.badge && (
+                  <div className="absolute top-3 left-3 z-10 px-3 py-1 bg-[#FF6B00]">
                     <span className="font-display text-[10px] tracking-widest text-white">
-                      {product.tag}
+                      {product.badge}
                     </span>
                   </div>
                 )}
                 <div className="aspect-[3/4] overflow-hidden">
                   <img
-                    src={product.image}
+                    src={product.imageUrl || ""}
                     alt={product.name}
                     className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
                   />
@@ -148,7 +152,7 @@ export default function Shop() {
                   </h3>
                   {/* Size selector */}
                   <div className="flex gap-1 mb-3 flex-wrap">
-                    {SIZES.map((size) => (
+                    {((product.sizes as string[]) || SIZES).map((size) => (
                       <button
                         key={size}
                         onClick={() => handleSizeSelect(product.id, size)}
@@ -164,11 +168,11 @@ export default function Shop() {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="font-display text-base font-bold text-[#FF6B00]">
-                      {convertPrice(product.priceUSD)}
+                      {convertPrice(product.price)}
                     </span>
                     <div className="flex items-center gap-1">
                       <Star size={10} fill="#FF6B00" stroke="none" />
-                      <span className="text-[#888] text-xs">{product.reviews}</span>
+                      <span className="text-[#888] text-xs">4.9</span>
                     </div>
                   </div>
                 </div>

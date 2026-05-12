@@ -8,6 +8,13 @@
       "when": 1778198517123,
       "tag": "0000_groovy_apocalypse",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1778592699705,
+      "tag": "0001_useful_spectrum",
+      "breakpoints": true
     }
   ]
 }

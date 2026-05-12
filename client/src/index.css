@@ -10,6 +10,17 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Register custom font utilities for Tailwind v4 */
+@utility font-display {
+  font-family: 'Oswald', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+@utility font-body {
+  font-family: 'DM Sans', sans-serif;
+}
+
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -157,6 +168,7 @@
   .font-body {
     font-family: 'DM Sans', sans-serif;
   }
+
   .btn-primary {
     display: inline-flex;
     align-items: center;
@@ -336,4 +348,86 @@ html {
 }
 .animate-pulse-red {
   animation: pulseRed 2s infinite;
+}
+
+/* ── Admin Panel Utilities ─────────────────────────────────────────────── */
+.admin-label {
+  display: block;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  color: #666;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+.admin-input {
+  width: 100%;
+  background-color: #2A2A2A;
+  border: 1px solid rgba(255,255,255,0.1);
+  color: white;
+  padding: 8px 12px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.admin-input:focus {
+  border-color: #FF6B00;
+}
+.admin-input::placeholder {
+  color: #444;
+}
+.admin-btn-primary {
+  background-color: #FF6B00;
+  color: white;
+  font-family: 'Oswald', sans-serif;
+  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 10px 16px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.admin-btn-primary:hover {
+  background-color: #e55f00;
+}
+.admin-btn-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.admin-btn-secondary {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.2);
+  color: #888;
+  font-family: 'Oswald', sans-serif;
+  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.admin-btn-secondary:hover {
+  border-color: rgba(255,255,255,0.4);
+  color: white;
+}
+.admin-btn-danger {
+  background: transparent;
+  border: 1px solid rgba(127,29,29,0.4);
+  color: #ef4444;
+  font-family: 'Oswald', sans-serif;
+  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.admin-btn-danger:hover {
+  border-color: rgba(239,68,68,0.6);
+  background-color: rgba(239,68,68,0.1);
 }
