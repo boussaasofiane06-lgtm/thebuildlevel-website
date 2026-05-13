@@ -39,6 +39,16 @@ export default function Shop() {
   // Use DB products if available, otherwise fall back to hardcoded
   const allProducts = (dbProducts && dbProducts.length > 0) ? dbProducts : FALLBACK_PRODUCTS;
 
+  // Pre-select first size for each product on load
+  useEffect(() => {
+    const defaults: Record<number, string> = {};
+    allProducts.forEach((p) => {
+      const sizes = (p.sizes as string[]) || SIZES;
+      if (sizes.length > 0) defaults[p.id] = sizes[0];
+    });
+    setSelectedSizes(defaults);
+  }, [allProducts.length]);
+
   const filtered = activeCategory === "All"
     ? allProducts
     : allProducts.filter((p) => p.category.toLowerCase() === activeCategory.toLowerCase());
@@ -152,19 +162,26 @@ export default function Shop() {
                   </h3>
                   {/* Size selector */}
                   <div className="flex gap-1 mb-3 flex-wrap">
-                    {((product.sizes as string[]) || SIZES).map((size) => (
-                      <button
-                        key={size}
-                        onClick={() => handleSizeSelect(product.id, size)}
-                        className={`w-7 h-7 border font-display text-[9px] transition-all ${
-                          selectedSizes[product.id] === size
-                            ? "border-[#FF6B00] text-[#FF6B00]"
-                            : "border-white/15 text-[#666] hover:border-[#FF6B00] hover:text-white"
-                        }`}
-                      >
-                        {size}
-                      </button>
-                    ))}
+                    {((product.sizes as string[]) || SIZES).map((size) => {
+                      const isSelected = selectedSizes[product.id] === size;
+                      return (
+                        <button
+                          key={size}
+                          onClick={(e) => { e.stopPropagation(); handleSizeSelect(product.id, size); }}
+                          style={isSelected ? { boxShadow: "0 0 8px rgba(255,107,0,0.7)" } : {}}
+                          className={`relative min-w-[30px] h-8 px-2 font-display text-[10px] font-bold transition-all duration-150 touch-manipulation border-2 ${
+                            isSelected
+                              ? "border-[#FF6B00] bg-[#FF6B00] text-white scale-110 z-10"
+                              : "border-white/20 text-[#666] hover:border-[#FF6B00] hover:text-white bg-transparent"
+                          }`}
+                        >
+                          {size}
+                          {isSelected && (
+                            <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[#FF6B00] border border-[#2A2A2A]" />
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="font-display text-base font-bold text-[#FF6B00]">
