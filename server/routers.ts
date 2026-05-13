@@ -135,12 +135,13 @@ export const appRouter = router({
             })
           ),
           currency: z.string().default("USD"),
+          shippingUSD: z.number().default(0),
         })
       )
       .mutation(async ({ input }) => {
-        const totalAmount = input.items
-          .reduce((sum, i) => sum + i.priceUSD * i.quantity, 0)
-          .toFixed(2);
+        const itemsTotal = input.items
+          .reduce((sum, i) => sum + i.priceUSD * i.quantity, 0);
+        const totalAmount = (itemsTotal + input.shippingUSD).toFixed(2);
 
         const order = await paypalOrders.createOrder({
           body: {

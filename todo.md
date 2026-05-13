@@ -18,7 +18,7 @@
 - [ ] Replace placeholder logo with real brand logo
 - [ ] Update social media handles (Instagram, TikTok)
 - [ ] Update contact email address
-- [ ] Add PayPal, Klarna, Afterpay full integration (currently redirects to Stripe for card)
+- [x] Add PayPal full integration (live PayPal buttons with createOrder/captureOrder via tRPC — Klarna/Afterpay still coming soon)
 - [ ] Add real customer reviews
 - [ ] Update About page with real brand story
 

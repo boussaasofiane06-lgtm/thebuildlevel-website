@@ -348,6 +348,8 @@ function CheckoutInner() {
                               priceUSD: i.priceUSD,
                               quantity: i.quantity,
                             })),
+                            currency: "USD",
+                            shippingUSD: shippingUSD,
                           });
                           if (!result.orderId) throw new Error("Failed to create PayPal order");
                           return result.orderId;
@@ -361,7 +363,7 @@ function CheckoutInner() {
                             if (result.status === "COMPLETED") {
                               clearCart();
                               toast.success("Payment successful! Thank you for your order.");
-                              navigate("/order-confirmation?session=" + data.orderID);
+                              navigate("/order-confirmation?session_id=" + data.orderID);
                             } else {
                               toast.error("Payment not completed. Please try again.");
                             }
