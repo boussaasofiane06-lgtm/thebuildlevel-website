@@ -467,24 +467,7 @@ export default function Home() {
             <p className="font-body text-[#888] text-sm mb-6">
               Follow us for daily motivation, drops, and community content
             </p>
-            <div className="flex justify-center gap-4">
-              <a
-                href="https://instagram.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-outline text-xs px-6 py-3"
-              >
-                INSTAGRAM
-              </a>
-              <a
-                href="https://tiktok.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-primary text-xs px-6 py-3"
-              >
-                TIKTOK
-              </a>
-            </div>
+
           </div>
         </div>
       </section>

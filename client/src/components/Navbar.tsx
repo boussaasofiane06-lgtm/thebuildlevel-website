@@ -117,10 +117,7 @@ export default function Navbar() {
             <span className="btn-primary mt-4 text-sm">Shop Now</span>
           </Link>
         </nav>
-        <div className="absolute bottom-10 flex gap-6">
-          <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="text-[#888] hover:text-white transition-colors font-display text-xs tracking-widest">Instagram</a>
-          <a href="https://tiktok.com" target="_blank" rel="noopener noreferrer" className="text-[#888] hover:text-white transition-colors font-display text-xs tracking-widest">TikTok</a>
-        </div>
+
       </div>
 
       {/* Cart Drawer */}
