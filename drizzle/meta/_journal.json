@@ -15,6 +15,13 @@
       "when": 1778592699705,
       "tag": "0001_useful_spectrum",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1778790416389,
+      "tag": "0002_modern_rage",
+      "breakpoints": true
     }
   ]
 }

@@ -10,7 +10,9 @@ import { notifyOwner } from "./_core/notification";
 import { invokeLLM } from "./_core/llm";
 import { adminRouter } from "./admin";
 import { getDb } from "./db";
-import { products } from "../drizzle/schema";
+import { products, blogPosts, digitalProducts, digitalPurchases } from "../drizzle/schema";
+import { eq, desc, and } from "drizzle-orm";
+import crypto from "crypto";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
   apiVersion: "2026-04-22.dahlia",
@@ -252,6 +254,204 @@ Keep responses concise, helpful, and on-brand. Use the BUILD LEVEL tone: direct,
             price: parseFloat(String(p.price)),
             compareAtPrice: p.compareAtPrice ? parseFloat(String(p.compareAtPrice)) : null,
           }));
+      }),
+  }),
+
+  // Blog procedures
+  blog: router({
+    list: publicProcedure
+      .input(z.object({ category: z.string().optional() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+        const rows = await db
+          .select()
+          .from(blogPosts)
+          .where(eq(blogPosts.published, true))
+          .orderBy(desc(blogPosts.createdAt));
+        return input.category ? rows.filter(p => p.category === input.category) : rows;
+      }),
+    get: publicProcedure
+      .input(z.object({ slug: z.string() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return null;
+        const rows = await db.select().from(blogPosts).where(and(eq(blogPosts.slug, input.slug), eq(blogPosts.published, true)));
+        return rows[0] || null;
+      }),
+    // Admin: list all (including unpublished)
+    adminList: publicProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return [];
+      return db.select().from(blogPosts).orderBy(desc(blogPosts.createdAt));
+    }),
+    adminCreate: publicProcedure
+      .input(z.object({
+        title: z.string().min(1),
+        slug: z.string().min(1),
+        excerpt: z.string().optional(),
+        content: z.string().min(1),
+        imageUrl: z.string().optional(),
+        category: z.string().default("mindset"),
+        published: z.boolean().default(false),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("DB unavailable");
+        await db.insert(blogPosts).values(input);
+        return { success: true };
+      }),
+    adminUpdate: publicProcedure
+      .input(z.object({
+        id: z.number(),
+        title: z.string().min(1).optional(),
+        slug: z.string().min(1).optional(),
+        excerpt: z.string().optional(),
+        content: z.string().optional(),
+        imageUrl: z.string().optional(),
+        category: z.string().optional(),
+        published: z.boolean().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("DB unavailable");
+        const { id, ...data } = input;
+        await db.update(blogPosts).set(data).where(eq(blogPosts.id, id));
+        return { success: true };
+      }),
+    adminDelete: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("DB unavailable");
+        await db.delete(blogPosts).where(eq(blogPosts.id, input.id));
+        return { success: true };
+      }),
+  }),
+
+  // Digital products procedures
+  digital: router({
+    list: publicProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return [];
+      const rows = await db
+        .select()
+        .from(digitalProducts)
+        .where(eq(digitalProducts.published, true))
+        .orderBy(desc(digitalProducts.sortOrder));
+      return rows.map(p => ({ ...p, price: parseFloat(String(p.price)) }));
+    }),
+    adminList: publicProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return [];
+      const rows = await db.select().from(digitalProducts).orderBy(desc(digitalProducts.createdAt));
+      return rows.map(p => ({ ...p, price: parseFloat(String(p.price)) }));
+    }),
+    adminCreate: publicProcedure
+      .input(z.object({
+        name: z.string().min(1),
+        description: z.string().optional(),
+        price: z.number().min(0),
+        category: z.string().default("guide"),
+        imageUrl: z.string().optional(),
+        fileKey: z.string().optional(),
+        fileUrl: z.string().optional(),
+        fileName: z.string().optional(),
+        badge: z.string().optional(),
+        published: z.boolean().default(false),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("DB unavailable");
+        await db.insert(digitalProducts).values({ ...input, price: String(input.price) });
+        return { success: true };
+      }),
+    adminUpdate: publicProcedure
+      .input(z.object({
+        id: z.number(),
+        name: z.string().optional(),
+        description: z.string().optional(),
+        price: z.number().optional(),
+        category: z.string().optional(),
+        imageUrl: z.string().optional(),
+        fileKey: z.string().optional(),
+        fileUrl: z.string().optional(),
+        fileName: z.string().optional(),
+        badge: z.string().optional(),
+        published: z.boolean().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("DB unavailable");
+        const { id, price, ...rest } = input;
+        const data: Record<string, unknown> = { ...rest };
+        if (price !== undefined) data.price = String(price);
+        await db.update(digitalProducts).set(data).where(eq(digitalProducts.id, id));
+        return { success: true };
+      }),
+    adminDelete: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("DB unavailable");
+        await db.delete(digitalProducts).where(eq(digitalProducts.id, input.id));
+        return { success: true };
+      }),
+    // Create checkout session for digital product
+    createCheckout: publicProcedure
+      .input(z.object({
+        productId: z.number(),
+        customerEmail: z.string().email(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const db = await getDb();
+        if (!db) throw new Error("DB unavailable");
+        const rows = await db.select().from(digitalProducts).where(eq(digitalProducts.id, input.productId));
+        const product = rows[0];
+        if (!product || !product.published) throw new Error("Product not found");
+        const origin = ctx.req.headers.origin || "http://localhost:3000";
+        const downloadToken = crypto.randomBytes(32).toString("hex");
+        // Store pending purchase
+        await db.insert(digitalPurchases).values({
+          productId: input.productId,
+          email: input.customerEmail,
+          downloadToken,
+        });
+        const session = await stripe.checkout.sessions.create({
+          line_items: [{
+            price_data: {
+              currency: "usd",
+              product_data: { name: product.name, description: product.description || undefined },
+              unit_amount: Math.round(parseFloat(String(product.price)) * 100),
+            },
+            quantity: 1,
+          }],
+          mode: "payment",
+          customer_email: input.customerEmail,
+          allow_promotion_codes: true,
+          success_url: `${origin}/digital/download?token=${downloadToken}`,
+          cancel_url: `${origin}/digital`,
+          metadata: { downloadToken, productId: String(input.productId) },
+        });
+        return { url: session.url };
+      }),
+    // Verify download token and return file URL
+    getDownload: publicProcedure
+      .input(z.object({ token: z.string() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return null;
+        const purchases = await db.select().from(digitalPurchases).where(eq(digitalPurchases.downloadToken, input.token));
+        const purchase = purchases[0];
+        if (!purchase) return null;
+        const products2 = await db.select().from(digitalProducts).where(eq(digitalProducts.id, purchase.productId));
+        const product = products2[0];
+        if (!product) return null;
+        // Mark as downloaded
+        if (!purchase.downloadedAt) {
+          await db.update(digitalPurchases).set({ downloadedAt: new Date() }).where(eq(digitalPurchases.downloadToken, input.token));
+        }
+        return { productName: product.name, fileUrl: product.fileUrl, fileName: product.fileName };
       }),
   }),
 

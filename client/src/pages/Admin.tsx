@@ -12,7 +12,7 @@ import { Link } from "wouter";
 import {
   Plus, Pencil, Trash2, Upload, Save, X, Package, Settings,
   ShoppingBag, ToggleLeft, ToggleRight, Star, StarOff, ChevronLeft,
-  Loader2, Image as ImageIcon, ExternalLink
+  Loader2, Image as ImageIcon, ExternalLink, BookOpen, Download
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -649,10 +649,277 @@ function IntegrationsTab() {
   );
 }
 
+// ─── Blog Tab ───────────────────────────────────────────────────────────────
+
+const BLOG_CATEGORIES = ["mindset", "training", "discipline", "nutrition", "lifestyle"];
+
+function BlogTab() {
+  const [showForm, setShowForm] = useState(false);
+  const [editPost, setEditPost] = useState<null | {
+    id?: number; title: string; slug: string; excerpt: string;
+    content: string; imageUrl: string; category: string; published: boolean;
+  }>(null);
+
+  const EMPTY_POST = { title: "", slug: "", excerpt: "", content: "", imageUrl: "", category: "mindset", published: false };
+
+  const { data: posts = [], refetch } = trpc.blog.adminList.useQuery();
+  const createPost = trpc.blog.adminCreate.useMutation({ onSuccess: () => { toast.success("Post created!"); setShowForm(false); refetch(); } });
+  const updatePost = trpc.blog.adminUpdate.useMutation({ onSuccess: () => { toast.success("Post updated!"); setEditPost(null); refetch(); } });
+  const deletePost = trpc.blog.adminDelete.useMutation({ onSuccess: () => { toast.success("Post deleted"); refetch(); } });
+
+  const form = editPost || (showForm ? EMPTY_POST : null);
+
+  const handleSave = () => {
+    if (!form) return;
+    if (!form.title || !form.slug || !form.content) { toast.error("Title, slug, and content are required"); return; }
+    if (editPost?.id) {
+      updatePost.mutate({ id: editPost.id, title: form.title, slug: form.slug, excerpt: form.excerpt || undefined, content: form.content, imageUrl: form.imageUrl || undefined, category: form.category, published: form.published });
+    } else {
+      createPost.mutate({ title: form.title, slug: form.slug, excerpt: form.excerpt || undefined, content: form.content, imageUrl: form.imageUrl || undefined, category: form.category, published: form.published });
+    }
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="font-display text-white font-bold tracking-widest text-lg">BLOG POSTS</h1>
+          <p className="font-body text-[#555] text-sm mt-1">{posts.length} posts total</p>
+        </div>
+        <button onClick={() => { setShowForm(true); setEditPost(null); }} className="admin-btn-primary flex items-center gap-2">
+          <Plus size={14} /> NEW POST
+        </button>
+      </div>
+
+      {/* Form */}
+      {(showForm || editPost) && (
+        <div className="bg-[#1A1A1A] border border-[#FF6B00]/30 p-6 mb-6 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="font-display text-[#888] text-[10px] tracking-widest block mb-1">TITLE *</label>
+              <input value={form?.title || ""} onChange={e => { const v = e.target.value; if (editPost) setEditPost(p => p ? { ...p, title: v, slug: p.slug || v.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") } : null); else setShowForm(true); }} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00]" placeholder="Post title" />
+            </div>
+            <div>
+              <label className="font-display text-[#888] text-[10px] tracking-widest block mb-1">SLUG *</label>
+              <input value={form?.slug || ""} onChange={e => { const v = e.target.value; if (editPost) setEditPost(p => p ? { ...p, slug: v } : null); }} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00]" placeholder="post-url-slug" />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="font-display text-[#888] text-[10px] tracking-widest block mb-1">CATEGORY</label>
+              <select value={form?.category || "mindset"} onChange={e => { const v = e.target.value; if (editPost) setEditPost(p => p ? { ...p, category: v } : null); }} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00]">
+                {BLOG_CATEGORIES.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="font-display text-[#888] text-[10px] tracking-widest block mb-1">IMAGE URL</label>
+              <input value={form?.imageUrl || ""} onChange={e => { const v = e.target.value; if (editPost) setEditPost(p => p ? { ...p, imageUrl: v } : null); }} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00]" placeholder="https://..." />
+            </div>
+          </div>
+          <div>
+            <label className="font-display text-[#888] text-[10px] tracking-widest block mb-1">EXCERPT (short summary)</label>
+            <input value={form?.excerpt || ""} onChange={e => { const v = e.target.value; if (editPost) setEditPost(p => p ? { ...p, excerpt: v } : null); }} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00]" placeholder="One-line summary shown on blog listing" />
+          </div>
+          <div>
+            <label className="font-display text-[#888] text-[10px] tracking-widest block mb-1">CONTENT *</label>
+            <textarea value={form?.content || ""} onChange={e => { const v = e.target.value; if (editPost) setEditPost(p => p ? { ...p, content: v } : null); }} rows={10} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00] resize-y" placeholder="Write your post content here..." />
+          </div>
+          <div className="flex items-center justify-between">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={form?.published || false} onChange={e => { const v = e.target.checked; if (editPost) setEditPost(p => p ? { ...p, published: v } : null); }} className="accent-[#FF6B00]" />
+              <span className="font-display text-[#888] text-xs tracking-widest">PUBLISH (visible to customers)</span>
+            </label>
+            <div className="flex gap-2">
+              <button onClick={() => { setShowForm(false); setEditPost(null); }} className="admin-btn-secondary">CANCEL</button>
+              <button onClick={handleSave} disabled={createPost.isPending || updatePost.isPending} className="admin-btn-primary flex items-center gap-2">
+                <Save size={12} /> {editPost?.id ? "UPDATE" : "CREATE"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Post List */}
+      {posts.length === 0 && !showForm ? (
+        <div className="bg-[#1A1A1A] border border-white/10 border-dashed p-12 text-center">
+          <BookOpen size={32} className="text-[#333] mx-auto mb-3" />
+          <p className="font-display text-[#555] text-sm tracking-widest">NO POSTS YET</p>
+          <p className="font-body text-[#444] text-xs mt-1">Click "NEW POST" to write your first blog post</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {posts.map(post => (
+            <div key={post.id} className="bg-[#1A1A1A] border border-white/10 p-4 flex items-start justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className={`font-display text-[10px] tracking-widest px-2 py-0.5 ${post.published ? "bg-green-500/20 text-green-400" : "bg-[#333] text-[#666]"}`}>
+                    {post.published ? "LIVE" : "DRAFT"}
+                  </span>
+                  <span className="font-display text-[#FF6B00] text-[10px] tracking-widest">{post.category?.toUpperCase()}</span>
+                </div>
+                <p className="font-display text-white font-bold tracking-wide text-sm truncate">{post.title}</p>
+                <p className="font-body text-[#555] text-xs mt-0.5">/blog/{post.slug}</p>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button onClick={() => { setEditPost({ id: post.id, title: post.title, slug: post.slug, excerpt: post.excerpt || "", content: post.content, imageUrl: post.imageUrl || "", category: post.category || "mindset", published: post.published ?? false }); setShowForm(false); }} className="p-1.5 text-[#555] hover:text-white transition-colors">
+                  <Pencil size={14} />
+                </button>
+                <button onClick={() => { if (window.confirm(`Delete "${post.title}"?`)) deletePost.mutate({ id: post.id }); }} className="p-1.5 text-[#555] hover:text-red-400 transition-colors">
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Digital Products Tab ─────────────────────────────────────────────────────
+
+const DIGITAL_CATEGORIES = ["guide", "workout", "nutrition", "mindset", "wallpaper"];
+
+function DigitalTab() {
+  const [showForm, setShowForm] = useState(false);
+  const [editItem, setEditItem] = useState<null | {
+    id?: number; name: string; description: string; price: string;
+    category: string; imageUrl: string; fileUrl: string; fileName: string;
+    badge: string; published: boolean;
+  }>(null);
+
+  const EMPTY_ITEM = { name: "", description: "", price: "", category: "guide", imageUrl: "", fileUrl: "", fileName: "", badge: "", published: false };
+
+  const { data: items = [], refetch } = trpc.digital.adminList.useQuery();
+  const createItem = trpc.digital.adminCreate.useMutation({ onSuccess: () => { toast.success("Product created!"); setShowForm(false); refetch(); } });
+  const updateItem = trpc.digital.adminUpdate.useMutation({ onSuccess: () => { toast.success("Product updated!"); setEditItem(null); refetch(); } });
+  const deleteItem = trpc.digital.adminDelete.useMutation({ onSuccess: () => { toast.success("Product deleted"); refetch(); } });
+
+  const form = editItem || (showForm ? EMPTY_ITEM : null);
+
+  const handleSave = () => {
+    if (!form) return;
+    if (!form.name || !form.price) { toast.error("Name and price are required"); return; }
+    const price = parseFloat(form.price);
+    if (isNaN(price) || price < 0) { toast.error("Invalid price"); return; }
+    if (editItem?.id) {
+      updateItem.mutate({ id: editItem.id, name: form.name, description: form.description || undefined, price, category: form.category, imageUrl: form.imageUrl || undefined, fileUrl: form.fileUrl || undefined, fileName: form.fileName || undefined, badge: form.badge || undefined, published: form.published });
+    } else {
+      createItem.mutate({ name: form.name, description: form.description || undefined, price, category: form.category, imageUrl: form.imageUrl || undefined, fileUrl: form.fileUrl || undefined, fileName: form.fileName || undefined, badge: form.badge || undefined, published: form.published });
+    }
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="font-display text-white font-bold tracking-widest text-lg">DIGITAL PRODUCTS</h1>
+          <p className="font-body text-[#555] text-sm mt-1">{items.length} products total</p>
+        </div>
+        <button onClick={() => { setShowForm(true); setEditItem(null); }} className="admin-btn-primary flex items-center gap-2">
+          <Plus size={14} /> ADD PRODUCT
+        </button>
+      </div>
+
+      {/* Form */}
+      {(showForm || editItem) && (
+        <div className="bg-[#1A1A1A] border border-[#FF6B00]/30 p-6 mb-6 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="font-display text-[#888] text-[10px] tracking-widest block mb-1">NAME *</label>
+              <input value={form?.name || ""} onChange={e => { const v = e.target.value; if (editItem) setEditItem(p => p ? { ...p, name: v } : null); }} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00]" placeholder="e.g. 12-Week Workout Plan" />
+            </div>
+            <div>
+              <label className="font-display text-[#888] text-[10px] tracking-widest block mb-1">PRICE (USD) *</label>
+              <input type="number" min="0" step="0.01" value={form?.price || ""} onChange={e => { const v = e.target.value; if (editItem) setEditItem(p => p ? { ...p, price: v } : null); }} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00]" placeholder="9.99" />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="font-display text-[#888] text-[10px] tracking-widest block mb-1">CATEGORY</label>
+              <select value={form?.category || "guide"} onChange={e => { const v = e.target.value; if (editItem) setEditItem(p => p ? { ...p, category: v } : null); }} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00]">
+                {DIGITAL_CATEGORIES.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="font-display text-[#888] text-[10px] tracking-widest block mb-1">BADGE (optional)</label>
+              <input value={form?.badge || ""} onChange={e => { const v = e.target.value; if (editItem) setEditItem(p => p ? { ...p, badge: v } : null); }} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00]" placeholder="e.g. BESTSELLER, NEW" />
+            </div>
+          </div>
+          <div>
+            <label className="font-display text-[#888] text-[10px] tracking-widest block mb-1">DESCRIPTION</label>
+            <textarea value={form?.description || ""} onChange={e => { const v = e.target.value; if (editItem) setEditItem(p => p ? { ...p, description: v } : null); }} rows={3} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00] resize-y" placeholder="What's included in this product?" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="font-display text-[#888] text-[10px] tracking-widest block mb-1">PRODUCT IMAGE URL</label>
+              <input value={form?.imageUrl || ""} onChange={e => { const v = e.target.value; if (editItem) setEditItem(p => p ? { ...p, imageUrl: v } : null); }} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00]" placeholder="https://... (cover image)" />
+            </div>
+            <div>
+              <label className="font-display text-[#888] text-[10px] tracking-widest block mb-1">FILE NAME (shown to buyer)</label>
+              <input value={form?.fileName || ""} onChange={e => { const v = e.target.value; if (editItem) setEditItem(p => p ? { ...p, fileName: v } : null); }} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00]" placeholder="e.g. workout-plan.pdf" />
+            </div>
+          </div>
+          <div>
+            <label className="font-display text-[#888] text-[10px] tracking-widest block mb-1">DOWNLOAD FILE URL (direct link to file)</label>
+            <input value={form?.fileUrl || ""} onChange={e => { const v = e.target.value; if (editItem) setEditItem(p => p ? { ...p, fileUrl: v } : null); }} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00]" placeholder="https://... (Google Drive, Dropbox, or direct PDF link)" />
+          </div>
+          <div className="flex items-center justify-between">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={form?.published || false} onChange={e => { const v = e.target.checked; if (editItem) setEditItem(p => p ? { ...p, published: v } : null); }} className="accent-[#FF6B00]" />
+              <span className="font-display text-[#888] text-xs tracking-widest">PUBLISH (visible to customers)</span>
+            </label>
+            <div className="flex gap-2">
+              <button onClick={() => { setShowForm(false); setEditItem(null); }} className="admin-btn-secondary">CANCEL</button>
+              <button onClick={handleSave} disabled={createItem.isPending || updateItem.isPending} className="admin-btn-primary flex items-center gap-2">
+                <Save size={12} /> {editItem?.id ? "UPDATE" : "CREATE"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Item List */}
+      {items.length === 0 && !showForm ? (
+        <div className="bg-[#1A1A1A] border border-white/10 border-dashed p-12 text-center">
+          <Download size={32} className="text-[#333] mx-auto mb-3" />
+          <p className="font-display text-[#555] text-sm tracking-widest">NO DIGITAL PRODUCTS YET</p>
+          <p className="font-body text-[#444] text-xs mt-1">Click "ADD PRODUCT" to create your first digital product</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {items.map(item => (
+            <div key={item.id} className="bg-[#1A1A1A] border border-white/10 p-4 flex items-start justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className={`font-display text-[10px] tracking-widest px-2 py-0.5 ${item.published ? "bg-green-500/20 text-green-400" : "bg-[#333] text-[#666]"}`}>
+                    {item.published ? "LIVE" : "DRAFT"}
+                  </span>
+                  <span className="font-display text-[#FF6B00] text-[10px] tracking-widest">{item.category?.toUpperCase()}</span>
+                </div>
+                <p className="font-display text-white font-bold tracking-wide text-sm truncate">{item.name}</p>
+                <p className="font-body text-[#555] text-xs mt-0.5">${item.price.toFixed(2)} · {item.fileUrl ? "File linked ✓" : "No file linked"}</p>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button onClick={() => { setEditItem({ id: item.id, name: item.name, description: item.description || "", price: String(item.price), category: item.category || "guide", imageUrl: item.imageUrl || "", fileUrl: item.fileUrl || "", fileName: item.fileName || "", badge: item.badge || "", published: item.published ?? false }); setShowForm(false); }} className="p-1.5 text-[#555] hover:text-white transition-colors">
+                  <Pencil size={14} />
+                </button>
+                <button onClick={() => { if (window.confirm(`Delete "${item.name}"?`)) deleteItem.mutate({ id: item.id }); }} className="p-1.5 text-[#555] hover:text-red-400 transition-colors">
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Admin Panel ─────────────────────────────────────────────────────────
 
 export default function Admin() {
-  const [tab, setTab] = useState<"products" | "settings" | "integrations">("products");
+  const [tab, setTab] = useState<"products" | "settings" | "integrations" | "blog" | "digital">("products");
   const [showModal, setShowModal] = useState(false);
   const [editProduct, setEditProduct] = useState<(ProductFormData & { id?: number }) | null>(null);
 
@@ -749,12 +1016,14 @@ export default function Admin() {
         <div className="border-b border-white/10 px-6 flex gap-0">
           {[
             { id: "products", label: "PRODUCTS", icon: Package },
+            { id: "blog", label: "BLOG", icon: BookOpen },
+            { id: "digital", label: "DIGITAL", icon: Download },
             { id: "settings", label: "SETTINGS", icon: Settings },
             { id: "integrations", label: "INTEGRATIONS", icon: ExternalLink },
           ].map(({ id, label, icon: Icon }) => (
             <button
               key={id}
-              onClick={() => setTab(id as "products" | "settings" | "integrations")}
+              onClick={() => setTab(id as "products" | "settings" | "integrations" | "blog" | "digital")}
               className={`flex items-center gap-2 px-5 py-4 font-display text-xs font-bold tracking-widest border-b-2 transition-colors ${
                 tab === id
                   ? "border-[#FF6B00] text-white"
@@ -858,6 +1127,8 @@ export default function Admin() {
 
           {tab === "settings" && <SettingsTab />}
           {tab === "integrations" && <IntegrationsTab />}
+          {tab === "blog" && <BlogTab />}
+          {tab === "digital" && <DigitalTab />}
         </div>
 
         {/* Add Product Modal */}

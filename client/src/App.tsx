@@ -14,6 +14,10 @@ import Checkout from "./pages/Checkout";
 import OrderConfirmation from "./pages/OrderConfirmation";
 import Integrations from "./pages/Integrations";
 import Admin from "./pages/Admin";
+import Blog from "./pages/Blog";
+import BlogPost from "./pages/BlogPost";
+import Digital from "./pages/Digital";
+import DigitalDownload from "./pages/DigitalDownload";
 import SocialProofNotification from "./components/SocialProofNotification";
 import ChatWidget from "./components/ChatWidget";
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
@@ -30,6 +34,10 @@ function Router() {
       <Route path="/order-confirmation" component={OrderConfirmation} />
       <Route path="/integrations" component={Integrations} />
       <Route path="/admin" component={Admin} />
+      <Route path="/blog" component={Blog} />
+      <Route path="/blog/:slug" component={BlogPost} />
+      <Route path="/digital" component={Digital} />
+      <Route path="/digital/download" component={DigitalDownload} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

@@ -13,9 +13,10 @@ import AnnouncementBanner from "./AnnouncementBanner";
 const navLinks = [
   { label: "Home", href: "/" },
   { label: "Shop", href: "/shop" },
+  { label: "Blog", href: "/blog" },
+  { label: "Digital", href: "/digital" },
   { label: "About", href: "/about" },
   { label: "Contact", href: "/contact" },
-  { label: "FAQ", href: "/faq" },
 ];
 
 export default function Navbar() {
