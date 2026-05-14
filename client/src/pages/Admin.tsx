@@ -435,10 +435,224 @@ function SettingsTab() {
   );
 }
 
+// ─── Integrations Tab ───────────────────────────────────────────────────────
+
+const INTEGRATION_STORAGE_KEY = "bl_integrations";
+
+function loadIntegrations(): Record<string, string> {
+  try {
+    return JSON.parse(localStorage.getItem(INTEGRATION_STORAGE_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function saveIntegrations(data: Record<string, string>) {
+  localStorage.setItem(INTEGRATION_STORAGE_KEY, JSON.stringify(data));
+}
+
+const INTEGRATIONS = [
+  {
+    id: "stripe",
+    name: "Stripe",
+    description: "Payment processing — accept cards, Apple Pay, and more.",
+    color: "#635BFF",
+    logo: "💳",
+    fields: [] as { key: string; label: string; placeholder: string }[],
+    alwaysConnected: true,
+    helpUrl: "https://dashboard.stripe.com",
+  },
+  {
+    id: "printify",
+    name: "Printify",
+    description: "Print-on-demand fulfillment — sync products and automate orders.",
+    color: "#00B388",
+    logo: "🖨️",
+    fields: [
+      { key: "printify_api_key", label: "API Key", placeholder: "Paste your Printify API key" },
+      { key: "printify_shop_id", label: "Shop ID", placeholder: "Your Printify Shop ID" },
+    ],
+    alwaysConnected: false,
+    helpUrl: "https://printify.com/app/account/api",
+  },
+  {
+    id: "shopify",
+    name: "Shopify",
+    description: "E-commerce backend — manage orders, inventory, and checkout.",
+    color: "#96BF48",
+    logo: "🛍️",
+    fields: [
+      { key: "shopify_store_url", label: "Store URL", placeholder: "yourstore.myshopify.com" },
+      { key: "shopify_api_key", label: "Admin API Key", placeholder: "Paste your Shopify Admin API key" },
+    ],
+    alwaysConnected: false,
+    helpUrl: "https://shopify.com/admin/apps/development",
+  },
+  {
+    id: "tidio",
+    name: "Tidio",
+    description: "AI-powered live chat and customer support widget.",
+    color: "#0A84FF",
+    logo: "💬",
+    fields: [
+      { key: "tidio_public_key", label: "Public Key", placeholder: "Paste your Tidio public key" },
+    ],
+    alwaysConnected: false,
+    helpUrl: "https://www.tidio.com/panel/settings/developer",
+  },
+];
+
+function IntegrationsTab() {
+  const [saved, setSaved] = useState<Record<string, string>>(loadIntegrations);
+  const [editing, setEditing] = useState<string | null>(null);
+  const [draft, setDraft] = useState<Record<string, string>>({});
+  const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
+
+  const isConnected = (id: string) => {
+    const intg = INTEGRATIONS.find(i => i.id === id);
+    if (!intg) return false;
+    if (intg.alwaysConnected) return true;
+    return intg.fields.every(f => !!saved[f.key]?.trim());
+  };
+
+  const startEdit = (id: string) => {
+    const intg = INTEGRATIONS.find(i => i.id === id)!;
+    const current: Record<string, string> = {};
+    intg.fields.forEach(f => { current[f.key] = saved[f.key] || ""; });
+    setDraft(current);
+    setEditing(id);
+  };
+
+  const handleSave = (id: string) => {
+    const updated = { ...saved, ...draft };
+    setSaved(updated);
+    saveIntegrations(updated);
+    setEditing(null);
+    toast.success("Integration saved!");
+  };
+
+  const handleDisconnect = (id: string) => {
+    if (!window.confirm("Disconnect this integration? Your keys will be removed.")) return;
+    const intg = INTEGRATIONS.find(i => i.id === id)!;
+    const updated = { ...saved };
+    intg.fields.forEach(f => { delete updated[f.key]; });
+    setSaved(updated);
+    saveIntegrations(updated);
+    toast.success("Integration disconnected");
+  };
+
+  return (
+    <div>
+      <div className="mb-6">
+        <h1 className="font-display text-white font-bold tracking-widest text-lg">INTEGRATIONS</h1>
+        <p className="font-body text-[#555] text-sm mt-1">Connect your third-party services. Keys are stored locally on this device.</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {INTEGRATIONS.map((intg) => {
+          const connected = isConnected(intg.id);
+          const isEditingThis = editing === intg.id;
+
+          return (
+            <div key={intg.id} className="bg-[#1A1A1A] border border-white/10 p-5 flex flex-col gap-4">
+              {/* Header */}
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">{intg.logo}</span>
+                  <div>
+                    <p className="font-display text-white font-bold tracking-wider text-sm">{intg.name}</p>
+                    <p className="font-body text-[#666] text-xs mt-0.5">{intg.description}</p>
+                  </div>
+                </div>
+                <span className={`flex-shrink-0 flex items-center gap-1.5 font-display text-[10px] tracking-widest px-2.5 py-1 ${
+                  connected
+                    ? "bg-green-500/10 text-green-400 border border-green-500/20"
+                    : "bg-white/5 text-[#555] border border-white/10"
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${connected ? "bg-green-400" : "bg-[#555]"}`} />
+                  {connected ? "CONNECTED" : "NOT CONNECTED"}
+                </span>
+              </div>
+
+              {/* Edit form */}
+              {isEditingThis && intg.fields.length > 0 && (
+                <div className="flex flex-col gap-3 border-t border-white/10 pt-4">
+                  {intg.fields.map(f => (
+                    <div key={f.key}>
+                      <label className="font-display text-[#888] text-[10px] tracking-widest block mb-1.5">{f.label}</label>
+                      <div className="relative">
+                        <input
+                          type={showKeys[f.key] ? "text" : "password"}
+                          value={draft[f.key] || ""}
+                          onChange={e => setDraft(d => ({ ...d, [f.key]: e.target.value }))}
+                          placeholder={f.placeholder}
+                          className="w-full bg-[#111] border border-white/10 text-white font-body text-xs px-3 py-2.5 pr-10 outline-none focus:border-[#FF6B00] transition-colors"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowKeys(s => ({ ...s, [f.key]: !s[f.key] }))}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#555] hover:text-white transition-colors text-xs"
+                        >
+                          {showKeys[f.key] ? "HIDE" : "SHOW"}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="flex gap-2 mt-1">
+                    <button onClick={() => handleSave(intg.id)} className="admin-btn-primary flex-1 text-xs">SAVE</button>
+                    <button onClick={() => setEditing(null)} className="admin-btn-secondary text-xs px-4">CANCEL</button>
+                  </div>
+                </div>
+              )}
+
+              {/* Actions */}
+              {!isEditingThis && (
+                <div className="flex items-center gap-2 border-t border-white/10 pt-4">
+                  {intg.alwaysConnected ? (
+                    <a href={intg.helpUrl} target="_blank" rel="noopener noreferrer"
+                      className="admin-btn-secondary flex items-center gap-1.5 text-xs flex-1 justify-center">
+                      <ExternalLink size={11} /> Open Dashboard
+                    </a>
+                  ) : connected ? (
+                    <>
+                      <button onClick={() => startEdit(intg.id)} className="admin-btn-secondary flex items-center gap-1.5 text-xs flex-1 justify-center">
+                        <Pencil size={11} /> Edit Keys
+                      </button>
+                      <button onClick={() => handleDisconnect(intg.id)} className="admin-btn-danger flex items-center gap-1.5 text-xs px-3">
+                        <X size={11} />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button onClick={() => startEdit(intg.id)} className="admin-btn-primary flex items-center gap-1.5 text-xs flex-1 justify-center">
+                        <Plus size={11} /> CONNECT
+                      </button>
+                      <a href={intg.helpUrl} target="_blank" rel="noopener noreferrer"
+                        className="admin-btn-secondary flex items-center gap-1.5 text-xs px-3">
+                        <ExternalLink size={11} />
+                      </a>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="mt-6 bg-[#1A1A1A] border border-white/10 border-dashed p-4">
+        <p className="font-body text-[#555] text-xs text-center">
+          🔒 Keys are stored locally in your browser. They are never sent to any server.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Admin Panel ─────────────────────────────────────────────────────────
 
 export default function Admin() {
-  const [tab, setTab] = useState<"products" | "settings">("products");
+  const [tab, setTab] = useState<"products" | "settings" | "integrations">("products");
   const [showModal, setShowModal] = useState(false);
   const [editProduct, setEditProduct] = useState<(ProductFormData & { id?: number }) | null>(null);
 
@@ -536,10 +750,11 @@ export default function Admin() {
           {[
             { id: "products", label: "PRODUCTS", icon: Package },
             { id: "settings", label: "SETTINGS", icon: Settings },
+            { id: "integrations", label: "INTEGRATIONS", icon: ExternalLink },
           ].map(({ id, label, icon: Icon }) => (
             <button
               key={id}
-              onClick={() => setTab(id as "products" | "settings")}
+              onClick={() => setTab(id as "products" | "settings" | "integrations")}
               className={`flex items-center gap-2 px-5 py-4 font-display text-xs font-bold tracking-widest border-b-2 transition-colors ${
                 tab === id
                   ? "border-[#FF6B00] text-white"
@@ -642,6 +857,7 @@ export default function Admin() {
           )}
 
           {tab === "settings" && <SettingsTab />}
+          {tab === "integrations" && <IntegrationsTab />}
         </div>
 
         {/* Add Product Modal */}
