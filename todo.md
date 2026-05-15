@@ -71,8 +71,19 @@
 - [x] Blog post detail page (/blog/[slug])
 - [x] Admin Blog tab with create/publish/draft CRUD
 
+## Manus Independence (Completed)
+- [x] Remove notifyOwner from routers.ts (no Manus notification API)
+- [x] Remove invokeLLM from routers.ts (no Manus LLM API)
+- [x] Remove translationRouter import and usage from routers.ts
+- [x] Remove storagePut from admin.ts (admin uses URL input instead)
+- [x] Chat widget uses static keyword-based responses (no Manus LLM)
+- [x] Digital page loads products dynamically from DB via tRPC
+- [ ] Push changes to GitHub → Render auto-deploys
+- [ ] Set up Cloudflare Worker proxy for /api/* → Render backend
+- [ ] Rebuild and redeploy frontend to Cloudflare Pages
+
 ## Pending Future Items
 - [ ] TikTok integration (clarify: display feed, TikTok Shop, or TikTok Pixel)
 - [ ] PDF upload directly from admin panel (currently uses external URL links)
-- [ ] AI chat that actually answers customer questions (currently falls back to email)
+- [x] AI chat that actually answers customer questions (currently falls back to email — static keyword responses, no Manus dependency)
 - [ ] info@buildlevel.com email setup (Cloudflare Email Routing)
