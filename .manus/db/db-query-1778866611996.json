@@ -1,0 +1,9 @@
+{
+  "query": "UPDATE digital_products SET fileUrl = '/manus-storage/BUILD_LEVEL_Execution_Over_Emotion_17e3c8b9.pdf', updatedAt = NOW() WHERE name LIKE '%EXECUTION OVER EMOTION%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway06.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3yjy74Aq4fSfMvH.root --database ZpCxvttgRWUJYjQSvWcg6k --execute UPDATE digital_products SET fileUrl = '/manus-storage/BUILD_LEVEL_Execution_Over_Emotion_17e3c8b9.pdf', updatedAt = NOW() WHERE name LIKE '%EXECUTION OVER EMOTION%';",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 931
+}
