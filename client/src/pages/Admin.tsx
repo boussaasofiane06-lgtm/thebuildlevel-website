@@ -164,15 +164,9 @@ function ProductModal({
   const set = (k: keyof ProductFormData, v: string | boolean) =>
     setForm((f) => ({ ...f, [k]: v }));
 
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64 = (reader.result as string).split(",")[1];
-      uploadImage.mutate({ base64, filename: file.name, mimeType: file.type });
-    };
-    reader.readAsDataURL(file);
+  const handleFile = (_e: React.ChangeEvent<HTMLInputElement>) => {
+    // File upload via Manus storage removed — use URL input below
+    toast.info("Please paste an image URL in the field below instead of uploading a file.");
   };
 
   return (

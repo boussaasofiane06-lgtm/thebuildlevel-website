@@ -1,59 +1,52 @@
 import { useState } from "react";
+import { trpc } from "@/lib/trpc";
+import { Loader2 } from "lucide-react";
 
-const PRODUCTS = [
-  {
-    id: 1,
-    name: "DISCIPLINE MINDSET",
-    subtitle: "Control Your Mind. Master Your Life.",
-    description:
-      "Most people have goals. Few have the discipline to reach them. This 5-chapter BUILD LEVEL system dismantles the excuses, rewires your daily habits, and builds the unbreakable mental foundation that separates those who talk from those who execute.",
-    price: "$19.99",
-    badge: "BESTSELLER",
-    category: "PDF GUIDE",
-    pages: "20 pages",
-    chapters: "5 chapters",
-    imageUrl: "/manus-storage/discipline_mindset_cover-01_e978ef9b.png",
-    paymentLink: "https://buy.stripe.com/test_3cI5kD3gc5iOfz18lY6wE00",
-    features: [
-      "The Discipline Gap — why most people never close it",
-      "The Identity Shift — become someone who doesn't quit",
-      "The Daily Stack — your non-negotiable routine",
-      "The Resistance Protocol — what to do when you don't want to",
-      "The Long Game — sustaining discipline for years, not days",
-    ],
-  },
-  {
-    id: 2,
-    name: "EXECUTION OVER EMOTION",
-    subtitle: "Act First. Feel Later. Win Always.",
-    description:
-      "Stop letting how you feel determine what you accomplish. This 5-chapter BUILD LEVEL system teaches you to act first and feel later — building the identity, daily stack, and emotional intelligence of someone who executes no matter what.",
-    price: "$19.99",
-    badge: "NEW",
-    category: "PDF GUIDE",
-    pages: "15 pages",
-    chapters: "5 chapters",
-    imageUrl: "https://d2xsxph8kpxj0f.cloudfront.net/310519663635005932/ZpCxvttgRWUJYjQSvWcg6k/execution_over_emotion_cover-XxPLoCsZtshDew6CWZtRnF.webp",
-    paymentLink: "https://buy.stripe.com/test_9B68wPbMIcLg2Mf59M6wE01",
-    features: [
-      "The Emotion Trap — why feelings make terrible bosses",
-      "The Execution Identity — who you are when feelings don't decide",
-      "The Execution Stack — your daily operating system",
-      "Emotional Intelligence as an Execution Tool",
-      "The Long Game — sustaining execution when the world pushes back",
-    ],
-  },
-];
+// Stripe Payment Links for each product (keyed by product name — update when adding new products)
+const PAYMENT_LINKS: Record<string, string> = {
+  "DISCIPLINE MINDSET": "https://buy.stripe.com/test_3cI5kD3gc5iOfz18lY6wE00",
+  "EXECUTION OVER EMOTION": "https://buy.stripe.com/test_9B68wPbMIcLg2Mf59M6wE01",
+};
 
-function ProductCard({ product }: { product: (typeof PRODUCTS)[0] }) {
+// Fallback for products without a payment link — use Stripe checkout via backend
+const DEFAULT_PAYMENT_LINK = "https://buy.stripe.com/test_3cI5kD3gc5iOfz18lY6wE00";
+
+type Product = {
+  id: number;
+  name: string;
+  description: string | null;
+  price: number;
+  category: string | null;
+  imageUrl: string | null;
+  fileUrl: string | null;
+  fileName: string | null;
+  badge: string | null;
+  published: boolean | null;
+  sortOrder: number | null;
+  createdAt: Date | null;
+};
+
+function ProductCard({ product }: { product: Product }) {
   const [expanded, setExpanded] = useState(false);
+
+  const paymentLink =
+    PAYMENT_LINKS[product.name.toUpperCase()] ||
+    PAYMENT_LINKS[product.name] ||
+    DEFAULT_PAYMENT_LINK;
+
+  const categoryLabel =
+    product.category === "audiobook"
+      ? "AUDIOBOOK"
+      : product.category === "video"
+      ? "VIDEO COURSE"
+      : "PDF GUIDE";
 
   return (
     <div className="bg-zinc-900 border border-zinc-800 overflow-hidden group hover:border-orange-500/50 transition-all duration-300">
       {/* Cover Image */}
       <div className="relative aspect-[3/4] overflow-hidden bg-zinc-800">
         <img
-          src={product.imageUrl}
+          src={product.imageUrl || ""}
           alt={product.name}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           onError={(e) => {
@@ -67,61 +60,66 @@ function ProductCard({ product }: { product: (typeof PRODUCTS)[0] }) {
           </div>
         )}
         <div className="absolute bottom-3 right-3 bg-black/80 text-orange-400 text-xs font-bold px-2 py-1 border border-orange-500/30 tracking-widest">
-          {product.category}
+          {categoryLabel}
         </div>
       </div>
 
       {/* Content */}
       <div className="p-6">
         <div className="mb-4">
-          <h2 className="text-white font-black text-xl tracking-wider leading-tight">
+          <h2 className="text-white font-black text-xl tracking-wider leading-tight uppercase">
             {product.name}
           </h2>
-          <p className="text-orange-400 text-sm font-semibold tracking-wide mt-1">
-            {product.subtitle}
-          </p>
         </div>
 
         <div className="flex gap-4 mb-4">
-          <span className="text-zinc-500 text-xs">{product.pages}</span>
-          <span className="text-zinc-700">·</span>
-          <span className="text-zinc-500 text-xs">{product.chapters}</span>
-          <span className="text-zinc-700">·</span>
           <span className="text-zinc-500 text-xs">Instant Download</span>
+          <span className="text-zinc-700">·</span>
+          <span className="text-zinc-500 text-xs">Digital Product</span>
         </div>
 
-        <p className="text-zinc-400 text-sm leading-relaxed mb-4">
-          {product.description}
-        </p>
+        {product.description && (
+          <p className="text-zinc-400 text-sm leading-relaxed mb-4">
+            {product.description}
+          </p>
+        )}
 
         <button
           onClick={() => setExpanded(!expanded)}
           className="text-orange-400 text-xs font-bold tracking-widest uppercase mb-4 flex items-center gap-2 hover:text-orange-300 transition-colors"
         >
           <span>{expanded ? "▲" : "▼"}</span>
-          WHAT'S INSIDE
+          DETAILS
         </button>
 
         {expanded && (
-          <ul className="mb-4 space-y-2">
-            {product.features.map((f, i) => (
-              <li key={i} className="flex items-start gap-2 text-zinc-400 text-sm">
-                <span className="text-orange-500 mt-0.5 shrink-0">▸</span>
-                <span>{f}</span>
-              </li>
-            ))}
-          </ul>
+          <div className="mb-4 space-y-2 text-zinc-400 text-sm">
+            <div className="flex items-start gap-2">
+              <span className="text-orange-500 mt-0.5 shrink-0">▸</span>
+              <span>Category: {categoryLabel}</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-orange-500 mt-0.5 shrink-0">▸</span>
+              <span>Instant delivery after purchase</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-orange-500 mt-0.5 shrink-0">▸</span>
+              <span>Lifetime access</span>
+            </div>
+          </div>
         )}
 
         <div className="border-t border-zinc-800 my-4" />
 
         <div className="flex items-center justify-between">
           <div>
-            <span className="text-white font-black text-2xl">{product.price}</span>
+            <span className="text-white font-black text-2xl">
+              ${product.price.toFixed(2)}
+            </span>
             <span className="text-zinc-600 text-xs ml-2">USD</span>
           </div>
           <a
-            href={product.paymentLink}
+            href={paymentLink}
             target="_blank"
             rel="noopener noreferrer"
             className="bg-orange-500 hover:bg-orange-400 text-black font-black text-sm px-6 py-3 tracking-widest uppercase transition-colors duration-200 inline-block"
@@ -143,16 +141,18 @@ function ProductCard({ product }: { product: (typeof PRODUCTS)[0] }) {
 export default function Digital() {
   const [filter, setFilter] = useState<"all" | "guide" | "audiobook">("all");
 
+  const { data: products, isLoading, error } = trpc.digital.list.useQuery();
+
   const isSuccess =
     typeof window !== "undefined" &&
     new URLSearchParams(window.location.search).get("success") === "1";
 
-  const filtered =
-    filter === "all"
-      ? PRODUCTS
-      : filter === "guide"
-      ? PRODUCTS.filter((p) => p.category === "PDF GUIDE")
-      : PRODUCTS.filter((p) => p.category === "AUDIOBOOK");
+  const filtered = (products || []).filter((p) => {
+    if (filter === "all") return true;
+    if (filter === "guide") return !p.category || p.category === "guide";
+    if (filter === "audiobook") return p.category === "audiobook";
+    return true;
+  });
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -212,7 +212,16 @@ export default function Digital() {
 
       {/* Products Grid */}
       <div className="max-w-6xl mx-auto px-4 py-12">
-        {filtered.length === 0 ? (
+        {isLoading ? (
+          <div className="flex items-center justify-center py-24">
+            <Loader2 className="animate-spin text-orange-500" size={32} />
+          </div>
+        ) : error ? (
+          <div className="text-center py-24">
+            <p className="text-zinc-600 text-lg">Unable to load products.</p>
+            <p className="text-zinc-700 text-sm mt-2">Please try again later.</p>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="text-center py-24">
             <p className="text-zinc-600 text-lg">No products in this category yet.</p>
             <p className="text-zinc-700 text-sm mt-2">Check back soon.</p>

@@ -6,10 +6,8 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
-import { notifyOwner } from "./_core/notification";
-import { invokeLLM } from "./_core/llm";
+// notifyOwner and invokeLLM removed — no Manus dependency
 import { adminRouter } from "./admin";
-import { translationRouter } from "./translationRouter";
 import { getDb } from "./db";
 import { products, blogPosts, digitalProducts, digitalPurchases, aiVideos, affiliateProducts, membershipTiers } from "../drizzle/schema";
 import { eq, desc, and } from "drizzle-orm";
@@ -111,18 +109,6 @@ export const appRouter = router({
           },
         });
 
-        // Notify owner of new order
-        const itemSummary = input.items
-          .map((i) => `${i.quantity}x ${i.name}`)
-          .join(", ");
-        const total = input.items
-          .reduce((sum, i) => sum + i.priceUSD * i.quantity, 0)
-          .toFixed(2);
-        await notifyOwner({
-          title: "🛒 New Order Placed — BUILD LEVEL",
-          content: `A new order was placed on your store.\n\nItems: ${itemSummary}\nTotal: $${total} ${input.currency.toUpperCase()}\nCustomer: ${input.customerEmail || "Guest"}`,
-        }).catch(() => {/* non-blocking */});
-
         return { url: session.url, sessionId: session.id };
       }),
 
@@ -186,12 +172,7 @@ export const appRouter = router({
         });
 
         const status = capture.result.status;
-        if (status === "COMPLETED") {
-          await notifyOwner({
-            title: "💰 PayPal Payment Received — BUILD LEVEL",
-            content: `PayPal order ${input.orderId} was completed successfully.`,
-          }).catch(() => {});
-        }
+        // Payment completed
 
         return { status, orderId: input.orderId };
       }),
@@ -219,16 +200,21 @@ You help customers with:
 
 Keep responses concise, helpful, and on-brand. Use the BUILD LEVEL tone: direct, motivational, and professional. Never make up information. If you don't know something, direct them to email info@buildlevel.com.`;
 
-        const response = await invokeLLM({
-          messages: [
-            { role: "system", content: systemPrompt },
-            ...input.messages.map((m) => ({ role: m.role, content: m.content })),
-          ],
-        });
-
-        const rawContent = response.choices?.[0]?.message?.content;
-        const content = typeof rawContent === "string" ? rawContent : "I'm here to help! Please email info@buildlevel.com for further assistance.";
-        return { reply: content };
+        // AI chat replaced with static response — contact info@buildlevel.com
+        const lastMessage = input.messages[input.messages.length - 1]?.content?.toLowerCase() || "";
+        let reply = "Thanks for reaching out! For the fastest response, email us at **info@buildlevel.com** and we'll get back to you within 24 hours.";
+        if (lastMessage.includes("ship") || lastMessage.includes("deliver")) {
+          reply = "Standard shipping takes 5-10 business days worldwide. Express shipping (2-3 business days) is available for $19.99. Free standard shipping on orders over $100.";
+        } else if (lastMessage.includes("return") || lastMessage.includes("refund")) {
+          reply = "We have a 30-day return policy. Items must be unworn, unwashed, and in original condition with tags attached. Email info@buildlevel.com to start a return.";
+        } else if (lastMessage.includes("size") || lastMessage.includes("fit")) {
+          reply = "We recommend sizing up if you're between sizes. Hoodies run true to size. T-shirts have a slim fit. A size chart is available on each product page.";
+        } else if (lastMessage.includes("track") || lastMessage.includes("order")) {
+          reply = "After your order ships, you'll receive a tracking email from our fulfillment partner. For order issues, email info@buildlevel.com with your order number.";
+        } else if (lastMessage.includes("pay") || lastMessage.includes("card")) {
+          reply = "We accept all major credit/debit cards, Apple Pay, Google Pay, PayPal, Klarna, and Afterpay.";
+        }
+        return { reply };
       }),
   }),
 
@@ -457,17 +443,14 @@ Keep responses concise, helpful, and on-brand. Use the BUILD LEVEL tone: direct,
   }),
 
   admin: adminRouter,
-  translation: translationRouter,
 
   notifications: router({
     // Owner alert when someone signs up to the email list
     emailSignup: publicProcedure
       .input(z.object({ email: z.string().email() }))
       .mutation(async ({ input }) => {
-        await notifyOwner({
-          title: "📧 New Email Signup — BUILD LEVEL",
-          content: `A new subscriber joined your email list.\n\nEmail: ${input.email}\nTime: ${new Date().toUTCString()}`,
-        }).catch(() => {/* non-blocking */});
+        // Email signup recorded — notifyOwner removed (no Manus dependency)
+        console.log(`[Email Signup] ${input.email} at ${new Date().toUTCString()}`);
         return { success: true };
       }),
 
@@ -479,10 +462,8 @@ Keep responses concise, helpful, and on-brand. Use the BUILD LEVEL tone: direct,
         message: z.string(),
       }))
       .mutation(async ({ input }) => {
-        await notifyOwner({
-          title: `📬 New Contact Form — ${input.name}`,
-          content: `Name: ${input.name}\nEmail: ${input.email}\n\nMessage:\n${input.message}`,
-        }).catch(() => {/* non-blocking */});
+        // Contact form submitted — notifyOwner removed (no Manus dependency)
+        console.log(`[Contact Form] From: ${input.name} <${input.email}>: ${input.message}`);
         return { success: true };
       }),
   }),

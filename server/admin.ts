@@ -10,7 +10,6 @@ import { z } from "zod";
 import { products, siteSettings } from "../drizzle/schema";
 import { getDb } from "./db";
 import { protectedProcedure, router } from "./_core/trpc";
-import { storagePut } from "./storage";
 
 // Admin-only middleware
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -106,14 +105,12 @@ export const adminRouter = router({
       return { success: true };
     }),
 
-  /** Upload a product image and return its URL */
+  /** Accept an external image URL for a product (no file upload needed) */
   uploadProductImage: adminProcedure
-    .input(z.object({ base64: z.string(), filename: z.string(), mimeType: z.string() }))
+    .input(z.object({ imageUrl: z.string().url() }))
     .mutation(async ({ input }) => {
-      const buffer = Buffer.from(input.base64, "base64");
-      const key = `products/${Date.now()}-${input.filename.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-      const { url } = await storagePut(key, buffer, input.mimeType);
-      return { url };
+      // Simply return the provided URL — admin pastes an external image URL
+      return { url: input.imageUrl };
     }),
 
   // ─── Site Settings ────────────────────────────────────────────────────────
