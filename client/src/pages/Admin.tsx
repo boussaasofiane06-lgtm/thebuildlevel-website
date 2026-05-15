@@ -785,11 +785,11 @@ function DigitalTab() {
   const [showForm, setShowForm] = useState(false);
   const [editItem, setEditItem] = useState<null | {
     id?: number; name: string; description: string; price: string;
-    category: string; imageUrl: string; fileUrl: string; fileName: string;
-    badge: string; published: boolean;
+    category: string; productType: string; imageUrl: string; fileUrl: string; fileName: string;
+    audioUrl: string; duration: string; badge: string; published: boolean;
   }>(null);
 
-  const EMPTY_ITEM = { name: "", description: "", price: "", category: "guide", imageUrl: "", fileUrl: "", fileName: "", badge: "", published: false };
+  const EMPTY_ITEM = { name: "", description: "", price: "", category: "guide", productType: "pdf", imageUrl: "", fileUrl: "", fileName: "", audioUrl: "", duration: "", badge: "", published: false };
 
   const { data: items = [], refetch } = trpc.digital.adminList.useQuery();
   const createItem = trpc.digital.adminCreate.useMutation({ onSuccess: () => { toast.success("Product created!"); setShowForm(false); refetch(); } });
@@ -837,6 +837,15 @@ function DigitalTab() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
+              <label className="font-display text-[#888] text-[10px] tracking-widest block mb-1">PRODUCT TYPE</label>
+              <select value={(form as any)?.productType || "pdf"} onChange={e => { const v = e.target.value; if (editItem) setEditItem(p => p ? { ...p, productType: v } : null); else setShowForm(true); }} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00]">
+                <option value="pdf">PDF Guide</option>
+                <option value="audiobook">Audiobook</option>
+                <option value="video">Video</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div>
               <label className="font-display text-[#888] text-[10px] tracking-widest block mb-1">CATEGORY</label>
               <select value={form?.category || "guide"} onChange={e => { const v = e.target.value; if (editItem) setEditItem(p => p ? { ...p, category: v } : null); }} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00]">
                 {DIGITAL_CATEGORIES.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
@@ -862,9 +871,21 @@ function DigitalTab() {
             </div>
           </div>
           <div>
-            <label className="font-display text-[#888] text-[10px] tracking-widest block mb-1">DOWNLOAD FILE URL (direct link to file)</label>
-            <input value={form?.fileUrl || ""} onChange={e => { const v = e.target.value; if (editItem) setEditItem(p => p ? { ...p, fileUrl: v } : null); }} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00]" placeholder="https://... (Google Drive, Dropbox, or direct PDF link)" />
+            <label className="font-display text-[#888] text-[10px] tracking-widest block mb-1">DOWNLOAD FILE URL (PDF, MP3, or any file link)</label>
+            <input value={form?.fileUrl || ""} onChange={e => { const v = e.target.value; if (editItem) setEditItem(p => p ? { ...p, fileUrl: v } : null); }} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00]" placeholder="https://... (Google Drive, Dropbox, or direct file link)" />
           </div>
+          {((form as any)?.productType === "audiobook" || (form as any)?.productType === "video") && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="font-display text-[#888] text-[10px] tracking-widest block mb-1">AUDIO/VIDEO STREAM URL (for preview player)</label>
+                <input value={(form as any)?.audioUrl || ""} onChange={e => { const v = e.target.value; if (editItem) setEditItem(p => p ? { ...p, audioUrl: v } : null); }} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00]" placeholder="https://... (MP3 or audio stream URL)" />
+              </div>
+              <div>
+                <label className="font-display text-[#888] text-[10px] tracking-widest block mb-1">DURATION (e.g. 2h 30min)</label>
+                <input value={(form as any)?.duration || ""} onChange={e => { const v = e.target.value; if (editItem) setEditItem(p => p ? { ...p, duration: v } : null); }} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00]" placeholder="e.g. 2h 30min" />
+              </div>
+            </div>
+          )}
           <div className="flex items-center justify-between">
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={form?.published || false} onChange={e => { const v = e.target.checked; if (editItem) setEditItem(p => p ? { ...p, published: v } : null); }} className="accent-[#FF6B00]" />
@@ -902,7 +923,7 @@ function DigitalTab() {
                 <p className="font-body text-[#555] text-xs mt-0.5">${item.price.toFixed(2)} · {item.fileUrl ? "File linked ✓" : "No file linked"}</p>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
-                <button onClick={() => { setEditItem({ id: item.id, name: item.name, description: item.description || "", price: String(item.price), category: item.category || "guide", imageUrl: item.imageUrl || "", fileUrl: item.fileUrl || "", fileName: item.fileName || "", badge: item.badge || "", published: item.published ?? false }); setShowForm(false); }} className="p-1.5 text-[#555] hover:text-white transition-colors">
+                <button onClick={() => { setEditItem({ id: item.id, name: item.name, description: item.description || "", price: String(item.price), category: item.category || "guide", productType: (item as any).productType || "pdf", imageUrl: item.imageUrl || "", fileUrl: item.fileUrl || "", fileName: item.fileName || "", audioUrl: (item as any).audioUrl || "", duration: (item as any).duration || "", badge: item.badge || "", published: item.published ?? false }); setShowForm(false); }} className="p-1.5 text-[#555] hover:text-white transition-colors">
                   <Pencil size={14} />
                 </button>
                 <button onClick={() => { if (window.confirm(`Delete "${item.name}"?`)) deleteItem.mutate({ id: item.id }); }} className="p-1.5 text-[#555] hover:text-red-400 transition-colors">

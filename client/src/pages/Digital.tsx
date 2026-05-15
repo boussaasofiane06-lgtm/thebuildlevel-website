@@ -1,12 +1,11 @@
 import { useState } from "react";
-import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { toast } from "sonner";
-import { Download, Lock, Star } from "lucide-react";
+import { Download, Lock, Star, Headphones, BookOpen, Play, Pause, Volume2 } from "lucide-react";
 
-const CATEGORIES = ["All", "Guide", "Workout", "Nutrition", "Mindset", "Wallpaper"];
+const CATEGORIES = ["All", "Guide", "Audiobook", "Workout", "Nutrition", "Mindset"];
 
 // Static fallback products — always visible even without server
 const STATIC_PRODUCTS = [
@@ -16,13 +15,52 @@ const STATIC_PRODUCTS = [
     description: "A fully-loaded 13-page guide to building unbreakable mental strength. Covers 7 chapters: What Discipline Really Means, The Architecture of Your Mind, The Five Pillars of Mental Discipline, Daily Protocols, Handling Failure, Advanced Mental Training, and The BUILD LEVEL Code. This is not motivation. This is a system.",
     price: 19.99,
     category: "mindset",
+    productType: "pdf" as const,
     badge: "NEW",
     imageUrl: "https://d2xsxph8kpxj0f.cloudfront.net/310519663635005932/ZpCxvttgRWUJYjQSvWcg6k/discipline-mindset-cover-4tL8ikv8VjQQa3vbGynnuC.webp",
     fileUrl: "/manus-storage/BUILD_LEVEL_Discipline_Mindset_4f45f459.pdf",
     fileName: "BUILD_LEVEL_Discipline_Mindset.pdf",
+    audioUrl: null as string | null,
+    duration: null as string | null,
     published: true,
   },
 ];
+
+// Audio Player component for audiobooks
+function AudioPlayer({ audioUrl, title }: { audioUrl: string; title: string }) {
+  const [playing, setPlaying] = useState(false);
+  const [audio] = useState(() => new Audio(audioUrl));
+
+  const toggle = () => {
+    if (playing) {
+      audio.pause();
+      setPlaying(false);
+    } else {
+      audio.play().catch(() => toast.error("Could not play audio. Try downloading instead."));
+      setPlaying(true);
+    }
+  };
+
+  audio.onended = () => setPlaying(false);
+
+  return (
+    <div className="bg-[#1A1A1A] border border-[#FF6B00]/30 p-4 flex items-center gap-4 mt-3">
+      <button
+        onClick={toggle}
+        className="w-10 h-10 bg-[#FF6B00] flex items-center justify-center flex-shrink-0 hover:bg-[#e55e00] transition-colors"
+      >
+        {playing ? <Pause size={16} className="text-black" /> : <Play size={16} className="text-black" />}
+      </button>
+      <div className="flex-1 min-w-0">
+        <p className="font-display text-white text-xs tracking-wide truncate">{title}</p>
+        <div className="flex items-center gap-1 mt-1">
+          <Volume2 size={10} className="text-[#FF6B00]" />
+          <span className="font-body text-[#555] text-[10px]">Preview available</span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function Digital() {
   const [activeCategory, setActiveCategory] = useState("All");
@@ -38,7 +76,11 @@ export default function Digital() {
 
   const filtered = activeCategory === "All"
     ? products
-    : products.filter(p => p.category === activeCategory.toLowerCase());
+    : products.filter(p =>
+        activeCategory === "Audiobook"
+          ? (p as any).productType === "audiobook"
+          : p.category === activeCategory.toLowerCase()
+      );
 
   const handleBuy = async (productId: number) => {
     const email = checkoutEmail[productId];
@@ -73,8 +115,19 @@ export default function Digital() {
             <span className="text-[#FF6B00]">PRODUCTS</span>
           </h1>
           <p className="font-body text-[#888] text-lg max-w-xl">
-            Workout plans, guides, and tools to help you build your level. Buy once, download instantly.
+            Guides, audiobooks, and tools to help you build your level. Buy once, access instantly.
           </p>
+          {/* Type icons */}
+          <div className="flex gap-6 mt-8">
+            <div className="flex items-center gap-2">
+              <BookOpen size={16} className="text-[#FF6B00]" />
+              <span className="font-display text-[#888] text-xs tracking-widest">PDF GUIDES</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Headphones size={16} className="text-[#FF6B00]" />
+              <span className="font-display text-[#888] text-xs tracking-widest">AUDIOBOOKS</span>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -114,69 +167,96 @@ export default function Digital() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filtered.map((product) => (
-                <div key={product.id} className="bg-[#111] border border-white/10 hover:border-[#FF6B00]/30 transition-all duration-300 overflow-hidden flex flex-col">
-                  {/* Image */}
-                  {product.imageUrl ? (
-                    <div className="aspect-video overflow-hidden relative">
-                      <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
-                      {product.badge && (
-                        <span className="absolute top-3 left-3 bg-[#FF6B00] text-black font-display text-[10px] tracking-widest px-2 py-1">
-                          {product.badge.toUpperCase()}
-                        </span>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="aspect-video bg-[#1A1A1A] flex items-center justify-center relative">
-                      <Download size={32} className="text-[#333]" />
-                      {product.badge && (
-                        <span className="absolute top-3 left-3 bg-[#FF6B00] text-black font-display text-[10px] tracking-widest px-2 py-1">
-                          {product.badge.toUpperCase()}
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Info */}
-                  <div className="p-5 flex flex-col flex-1">
-                    <span className="font-display text-[#FF6B00] text-[10px] tracking-widest uppercase">{product.category}</span>
-                    <h2 className="font-display text-white font-bold text-lg tracking-wide mt-1 mb-2">{product.name}</h2>
-                    {product.description && (
-                      <p className="font-body text-[#666] text-sm mb-4 flex-1 line-clamp-3">{product.description}</p>
+              {filtered.map((product) => {
+                const isAudiobook = (product as any).productType === "audiobook";
+                const audioUrl = (product as any).audioUrl as string | null;
+                const duration = (product as any).duration as string | null;
+                return (
+                  <div key={product.id} className="bg-[#111] border border-white/10 hover:border-[#FF6B00]/30 transition-all duration-300 overflow-hidden flex flex-col">
+                    {/* Image */}
+                    {product.imageUrl ? (
+                      <div className="aspect-video overflow-hidden relative">
+                        <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+                        {/* Type badge */}
+                        <div className="absolute top-3 right-3 bg-black/70 flex items-center gap-1 px-2 py-1">
+                          {isAudiobook
+                            ? <><Headphones size={10} className="text-[#FF6B00]" /><span className="font-display text-[#FF6B00] text-[9px] tracking-widest">AUDIO</span></>
+                            : <><BookOpen size={10} className="text-[#FF6B00]" /><span className="font-display text-[#FF6B00] text-[9px] tracking-widest">PDF</span></>
+                          }
+                        </div>
+                        {product.badge && (
+                          <span className="absolute top-3 left-3 bg-[#FF6B00] text-black font-display text-[10px] tracking-widest px-2 py-1">
+                            {product.badge.toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="aspect-video bg-[#1A1A1A] flex items-center justify-center relative">
+                        {isAudiobook ? <Headphones size={32} className="text-[#333]" /> : <Download size={32} className="text-[#333]" />}
+                        {product.badge && (
+                          <span className="absolute top-3 left-3 bg-[#FF6B00] text-black font-display text-[10px] tracking-widest px-2 py-1">
+                            {product.badge.toUpperCase()}
+                          </span>
+                        )}
+                      </div>
                     )}
 
-                    {/* Price + Download badge */}
-                    <div className="flex items-center justify-between mb-4">
-                      <span className="font-display text-white font-bold text-2xl">
-                        ${product.price.toFixed(2)}
-                      </span>
-                      <div className="flex items-center gap-1 text-[#555]">
-                        <Download size={12} />
-                        <span className="font-body text-xs">Instant download</span>
+                    {/* Info */}
+                    <div className="p-5 flex flex-col flex-1">
+                      <span className="font-display text-[#FF6B00] text-[10px] tracking-widest uppercase">{product.category}</span>
+                      <h2 className="font-display text-white font-bold text-lg tracking-wide mt-1 mb-2">{product.name}</h2>
+                      {product.description && (
+                        <p className="font-body text-[#666] text-sm mb-3 flex-1 line-clamp-3">{product.description}</p>
+                      )}
+
+                      {/* Audio preview player for audiobooks */}
+                      {isAudiobook && audioUrl && (
+                        <AudioPlayer audioUrl={audioUrl} title={product.name} />
+                      )}
+
+                      {/* Duration for audiobooks */}
+                      {isAudiobook && duration && (
+                        <div className="flex items-center gap-1 mt-2 mb-2">
+                          <Headphones size={11} className="text-[#555]" />
+                          <span className="font-body text-[#555] text-xs">{duration}</span>
+                        </div>
+                      )}
+
+                      {/* Price + type badge */}
+                      <div className="flex items-center justify-between mb-4 mt-3">
+                        <span className="font-display text-white font-bold text-2xl">
+                          ${Number(product.price).toFixed(2)}
+                        </span>
+                        <div className="flex items-center gap-1 text-[#555]">
+                          {isAudiobook
+                            ? <><Headphones size={12} /><span className="font-body text-xs">Stream + Download</span></>
+                            : <><Download size={12} /><span className="font-body text-xs">Instant download</span></>
+                          }
+                        </div>
+                      </div>
+
+                      {/* Email + Buy */}
+                      <div className="flex flex-col gap-2">
+                        <input
+                          type="email"
+                          placeholder="Your email for access link"
+                          value={checkoutEmail[product.id] || ""}
+                          onChange={e => setCheckoutEmail(prev => ({ ...prev, [product.id]: e.target.value }))}
+                          className="w-full bg-[#1A1A1A] border border-white/10 text-white font-body text-xs px-3 py-2.5 outline-none focus:border-[#FF6B00] transition-colors placeholder:text-[#444]"
+                        />
+                        <button
+                          onClick={() => handleBuy(product.id)}
+                          disabled={loadingId === product.id}
+                          className="w-full bg-[#FF6B00] text-black font-display text-xs tracking-widest py-3 hover:bg-[#e55e00] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                        >
+                          <Lock size={12} />
+                          {loadingId === product.id ? "REDIRECTING..." : isAudiobook ? "BUY NOW — STREAM + DOWNLOAD" : "BUY NOW — INSTANT ACCESS"}
+                        </button>
                       </div>
                     </div>
-
-                    {/* Email + Buy */}
-                    <div className="flex flex-col gap-2">
-                      <input
-                        type="email"
-                        placeholder="Your email for download link"
-                        value={checkoutEmail[product.id] || ""}
-                        onChange={e => setCheckoutEmail(prev => ({ ...prev, [product.id]: e.target.value }))}
-                        className="w-full bg-[#1A1A1A] border border-white/10 text-white font-body text-xs px-3 py-2.5 outline-none focus:border-[#FF6B00] transition-colors placeholder:text-[#444]"
-                      />
-                      <button
-                        onClick={() => handleBuy(product.id)}
-                        disabled={loadingId === product.id}
-                        className="w-full bg-[#FF6B00] text-black font-display text-xs tracking-widest py-3 hover:bg-[#e55e00] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                      >
-                        <Lock size={12} />
-                        {loadingId === product.id ? "REDIRECTING..." : "BUY NOW — INSTANT ACCESS"}
-                      </button>
-                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -187,7 +267,7 @@ export default function Digital() {
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
           {[
             { icon: <Lock size={20} />, title: "SECURE PAYMENT", desc: "Powered by Stripe. Your payment info is never stored." },
-            { icon: <Download size={20} />, title: "INSTANT DOWNLOAD", desc: "Get your download link immediately after purchase." },
+            { icon: <Headphones size={20} />, title: "STREAM + DOWNLOAD", desc: "Listen online or download to your device. Yours forever." },
             { icon: <Star size={20} />, title: "QUALITY CONTENT", desc: "Built by people who live the BUILD LEVEL mindset." },
           ].map((item) => (
             <div key={item.title} className="flex flex-col items-center gap-3">
