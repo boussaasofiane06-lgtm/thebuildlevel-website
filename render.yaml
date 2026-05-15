@@ -7,6 +7,10 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: API_ONLY
+        value: "true"
+      - key: ADMIN_PASSWORD_HASH
+        sync: false
       - key: DATABASE_URL
         sync: false
       - key: JWT_SECRET
@@ -17,17 +21,7 @@ services:
         sync: false
       - key: VITE_STRIPE_PUBLISHABLE_KEY
         sync: false
-      - key: BUILT_IN_FORGE_API_KEY
+      - key: PAYPAL_CLIENT_ID
         sync: false
-      - key: BUILT_IN_FORGE_API_URL
-        sync: false
-      - key: VITE_APP_ID
-        sync: false
-      - key: OAUTH_SERVER_URL
-        sync: false
-      - key: VITE_OAUTH_PORTAL_URL
-        sync: false
-      - key: OWNER_OPEN_ID
-        sync: false
-      - key: OWNER_NAME
+      - key: PAYPAL_CLIENT_SECRET
         sync: false
