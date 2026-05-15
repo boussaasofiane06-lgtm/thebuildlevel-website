@@ -80,10 +80,16 @@ async function startServer() {
     })
   );
   // development mode uses Vite, production mode uses static files
+  // When API_ONLY=true (Render backend), skip static file serving — frontend is on Cloudflare Pages
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
-  } else {
+  } else if (process.env.API_ONLY !== "true") {
     serveStatic(app);
+  } else {
+    // API-only mode: return 404 for non-API routes
+    app.use("*", (_req, res) => {
+      res.status(404).json({ error: "Not found", hint: "This is an API-only server. Frontend is hosted on Cloudflare Pages." });
+    });
   }
 
   const preferredPort = parseInt(process.env.PORT || "3000");
