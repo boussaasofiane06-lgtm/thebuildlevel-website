@@ -111,8 +111,9 @@ export const adminRouter = router({
       shopifyVariantId: input.shopifyVariantId ?? null,
       shopifyProductId: input.shopifyProductId ?? null,
       printifyProductId: input.printifyProductId ?? null,
-    }).returning({ id: products.id });
-    return { id: result[0]?.id ?? 0, success: true };
+    });
+    const [inserted] = await db.select({ id: products.id }).from(products).orderBy(asc(products.createdAt)).limit(1);
+    return { id: inserted?.id ?? 0, success: true };
   }),
 
   /** Update an existing product */
@@ -181,10 +182,12 @@ export const adminRouter = router({
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
-      await db
-        .insert(siteSettings)
-        .values({ key: input.key, value: input.value, updatedAt: new Date() })
-        .onConflictDoUpdate({ target: siteSettings.key, set: { value: input.value, updatedAt: new Date() } });
+      const existing = await db.select().from(siteSettings).where(eq(siteSettings.key, input.key)).limit(1);
+      if (existing.length > 0) {
+        await db.update(siteSettings).set({ value: input.value, updatedAt: new Date() }).where(eq(siteSettings.key, input.key));
+      } else {
+        await db.insert(siteSettings).values({ key: input.key, value: input.value, updatedAt: new Date() });
+      }
       return { success: true };
     }),
 
@@ -195,10 +198,12 @@ export const adminRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
       for (const [key, value] of Object.entries(input)) {
-        await db
-          .insert(siteSettings)
-          .values({ key, value, updatedAt: new Date() })
-          .onConflictDoUpdate({ target: siteSettings.key, set: { value, updatedAt: new Date() } });
+        const existing = await db.select().from(siteSettings).where(eq(siteSettings.key, key)).limit(1);
+        if (existing.length > 0) {
+          await db.update(siteSettings).set({ value, updatedAt: new Date() }).where(eq(siteSettings.key, key));
+        } else {
+          await db.insert(siteSettings).values({ key, value, updatedAt: new Date() });
+        }
       }
       return { success: true };
     }),

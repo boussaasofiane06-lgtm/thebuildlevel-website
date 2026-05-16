@@ -1,0 +1,90 @@
+{
+  "query": "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'products' ORDER BY ordinal_position;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway06.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3yjy74Aq4fSfMvH.root --database ZpCxvttgRWUJYjQSvWcg6k --execute SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'products' ORDER BY ordinal_position;",
+  "rows": [
+    {
+      "column_name": "id",
+      "data_type": "int"
+    },
+    {
+      "column_name": "name",
+      "data_type": "varchar"
+    },
+    {
+      "column_name": "description",
+      "data_type": "text"
+    },
+    {
+      "column_name": "price",
+      "data_type": "decimal"
+    },
+    {
+      "column_name": "compareAtPrice",
+      "data_type": "decimal"
+    },
+    {
+      "column_name": "category",
+      "data_type": "varchar"
+    },
+    {
+      "column_name": "sizes",
+      "data_type": "json"
+    },
+    {
+      "column_name": "imageUrl",
+      "data_type": "text"
+    },
+    {
+      "column_name": "badge",
+      "data_type": "varchar"
+    },
+    {
+      "column_name": "inStock",
+      "data_type": "tinyint"
+    },
+    {
+      "column_name": "featured",
+      "data_type": "tinyint"
+    },
+    {
+      "column_name": "sortOrder",
+      "data_type": "int"
+    },
+    {
+      "column_name": "shopifyVariantId",
+      "data_type": "varchar"
+    },
+    {
+      "column_name": "shopifyProductId",
+      "data_type": "varchar"
+    },
+    {
+      "column_name": "printifyProductId",
+      "data_type": "varchar"
+    },
+    {
+      "column_name": "createdAt",
+      "data_type": "timestamp"
+    },
+    {
+      "column_name": "updatedAt",
+      "data_type": "timestamp"
+    },
+    {
+      "column_name": "published",
+      "data_type": "tinyint"
+    },
+    {
+      "column_name": "hidden",
+      "data_type": "tinyint"
+    },
+    {
+      "column_name": "delisted",
+      "data_type": "tinyint"
+    }
+  ],
+  "messages": [],
+  "stdout": "column_name\tdata_type\nid\tint\nname\tvarchar\ndescription\ttext\nprice\tdecimal\ncompareAtPrice\tdecimal\ncategory\tvarchar\nsizes\tjson\nimageUrl\ttext\nbadge\tvarchar\ninStock\ttinyint\nfeatured\ttinyint\nsortOrder\tint\nshopifyVariantId\tvarchar\nshopifyProductId\tvarchar\nprintifyProductId\tvarchar\ncreatedAt\ttimestamp\nupdatedAt\ttimestamp\npublished\ttinyint\nhidden\ttinyint\ndelisted\ttinyint\n",
+  "stderr": "",
+  "execution_time_ms": 891
+}

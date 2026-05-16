@@ -315,14 +315,20 @@ export const translationRouter = router({
       }
 
       // Insert new pending record
-      const inserted = await db.insert(digitalProductTranslations).values({
+      await db.insert(digitalProductTranslations).values({
         productId: input.productId,
         language: input.language,
         languageName: lang.name,
         status: "pending",
-      }).returning({ id: digitalProductTranslations.id });
-
-      return { status: "pending", id: inserted[0]?.id ?? 0 };
+      });
+      const [newRow] = await db.select({ id: digitalProductTranslations.id })
+        .from(digitalProductTranslations)
+        .where(and(
+          eq(digitalProductTranslations.productId, input.productId),
+          eq(digitalProductTranslations.language, input.language)
+        ))
+        .limit(1);
+      return { status: "pending", id: newRow?.id ?? 0 };
     }),
 
   // Process translation (called by frontend polling — does the actual work)

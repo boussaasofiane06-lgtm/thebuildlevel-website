@@ -233,9 +233,9 @@ Keep responses concise, helpful, and on-brand. Use the BUILD LEVEL tone: direct,
           .from(products)
           .orderBy(asc(products.sortOrder), asc(products.createdAt));
         return rows
-          .filter((p) => !input.category || p.category === input.category)
-          .filter((p) => !input.featuredOnly || p.featured === true)
-          .map((p) => ({
+          .filter((p: typeof rows[0]) => !input.category || p.category === input.category)
+          .filter((p: typeof rows[0]) => !input.featuredOnly || p.featured === true)
+          .map((p: typeof rows[0]) => ({
             ...p,
             price: parseFloat(String(p.price)),
             compareAtPrice: p.compareAtPrice ? parseFloat(String(p.compareAtPrice)) : null,
@@ -255,7 +255,7 @@ Keep responses concise, helpful, and on-brand. Use the BUILD LEVEL tone: direct,
           .from(blogPosts)
           .where(eq(blogPosts.published, true))
           .orderBy(desc(blogPosts.createdAt));
-        return input.category ? rows.filter(p => p.category === input.category) : rows;
+        return input.category ? rows.filter((p: typeof rows[0]) => p.category === input.category) : rows;
       }),
     get: publicProcedure
       .input(z.object({ slug: z.string() }))
@@ -325,13 +325,13 @@ Keep responses concise, helpful, and on-brand. Use the BUILD LEVEL tone: direct,
         .from(digitalProducts)
         .where(eq(digitalProducts.published, true))
         .orderBy(desc(digitalProducts.sortOrder));
-      return rows.map(p => ({ ...p, price: parseFloat(String(p.price)) }));
+      return rows.map((p: typeof rows[0]) => ({ ...p, price: parseFloat(String(p.price)) }));
     }),
     adminList: publicProcedure.query(async () => {
       const db = await getDb();
       if (!db) return [];
       const rows = await db.select().from(digitalProducts).orderBy(desc(digitalProducts.createdAt));
-      return rows.map(p => ({ ...p, price: parseFloat(String(p.price)) }));
+      return rows.map((p: typeof rows[0]) => ({ ...p, price: parseFloat(String(p.price)) }));
     }),
     adminCreate: publicProcedure
       .input(z.object({
