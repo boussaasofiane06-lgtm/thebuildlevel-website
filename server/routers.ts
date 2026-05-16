@@ -233,7 +233,6 @@ Keep responses concise, helpful, and on-brand. Use the BUILD LEVEL tone: direct,
           .from(products)
           .orderBy(asc(products.sortOrder), asc(products.createdAt));
         return rows
-          .filter((p) => p.inStock !== false)
           .filter((p) => !input.category || p.category === input.category)
           .filter((p) => !input.featuredOnly || p.featured === true)
           .map((p) => ({

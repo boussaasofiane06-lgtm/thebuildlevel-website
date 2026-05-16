@@ -27,6 +27,9 @@ interface ProductFormData {
   sizes: string;
   badge: string;
   inStock: boolean;
+  published: boolean;
+  hidden: boolean;
+  delisted: boolean;
   featured: boolean;
   sortOrder: string;
   shopifyVariantId: string;
@@ -38,7 +41,7 @@ interface ProductFormData {
 const EMPTY_FORM: ProductFormData = {
   name: "", description: "", price: "", compareAtPrice: "",
   category: "hoodies", sizes: "S,M,L,XL,XXL", badge: "",
-  inStock: true, featured: false, sortOrder: "0",
+  inStock: true, published: false, hidden: false, delisted: false, featured: false, sortOrder: "0",
   shopifyVariantId: "", shopifyProductId: "", printifyProductId: "", imageUrl: "",
 };
 
@@ -274,12 +277,24 @@ function ProductModal({
           </div>
 
           {/* Toggles */}
-          <div className="flex items-center gap-6 pt-2">
-            <button onClick={() => set("inStock", !form.inStock)} className="flex items-center gap-2 text-xs font-body">
+          <div className="md:col-span-2 flex flex-wrap items-center gap-5 pt-2">
+            <button type="button" onClick={() => set("published", !form.published)} className="flex items-center gap-2 text-xs font-body">
+              {form.published ? <ToggleRight size={20} className="text-green-400" /> : <ToggleLeft size={20} className="text-[#555]" />}
+              <span className={form.published ? "text-green-400" : "text-[#555]"}>Published</span>
+            </button>
+            <button type="button" onClick={() => set("inStock", !form.inStock)} className="flex items-center gap-2 text-xs font-body">
               {form.inStock ? <ToggleRight size={20} className="text-green-400" /> : <ToggleLeft size={20} className="text-[#555]" />}
               <span className={form.inStock ? "text-green-400" : "text-[#555]"}>In Stock</span>
             </button>
-            <button onClick={() => set("featured", !form.featured)} className="flex items-center gap-2 text-xs font-body">
+            <button type="button" onClick={() => set("hidden", !form.hidden)} className="flex items-center gap-2 text-xs font-body">
+              {form.hidden ? <ToggleRight size={20} className="text-yellow-400" /> : <ToggleLeft size={20} className="text-[#555]" />}
+              <span className={form.hidden ? "text-yellow-400" : "text-[#555]"}>Hidden</span>
+            </button>
+            <button type="button" onClick={() => set("delisted", !form.delisted)} className="flex items-center gap-2 text-xs font-body">
+              {form.delisted ? <ToggleRight size={20} className="text-red-400" /> : <ToggleLeft size={20} className="text-[#555]" />}
+              <span className={form.delisted ? "text-red-400" : "text-[#555]"}>Delisted</span>
+            </button>
+            <button type="button" onClick={() => set("featured", !form.featured)} className="flex items-center gap-2 text-xs font-body">
               {form.featured ? <Star size={16} className="text-[#FF6B00]" fill="#FF6B00" /> : <StarOff size={16} className="text-[#555]" />}
               <span className={form.featured ? "text-[#FF6B00]" : "text-[#555]"}>Featured</span>
             </button>
@@ -1240,6 +1255,9 @@ export default function Admin() {
       imageUrl: form.imageUrl || undefined,
       badge: form.badge || undefined,
       inStock: form.inStock,
+      published: form.published,
+      hidden: form.hidden,
+      delisted: form.delisted,
       featured: form.featured,
       sortOrder: parseInt(form.sortOrder) || 0,
       shopifyVariantId: form.shopifyVariantId || undefined,
@@ -1265,6 +1283,9 @@ export default function Admin() {
       sizes: (p.sizes as string[]).join(","),
       badge: p.badge || "",
       inStock: p.inStock ?? true,
+      published: (p as any).published ?? false,
+      hidden: (p as any).hidden ?? false,
+      delisted: (p as any).delisted ?? false,
       featured: p.featured ?? false,
       sortOrder: String(p.sortOrder),
       shopifyVariantId: p.shopifyVariantId || "",
@@ -1357,62 +1378,128 @@ export default function Admin() {
 
               {/* Product Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {productList.map((p) => (
-                  <div key={p.id} className="bg-[#1A1A1A] border border-white/10 overflow-hidden">
-                    {/* Image */}
-                    <div className="aspect-square bg-[#2A2A2A] relative overflow-hidden">
-                      {p.imageUrl ? (
-                        <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <ImageIcon size={32} className="text-[#333]" />
-                        </div>
-                      )}
-                      {p.badge && (
-                        <span className="absolute top-2 left-2 bg-[#FF6B00] text-white font-display text-[9px] font-bold tracking-widest px-2 py-1">
-                          {p.badge}
-                        </span>
-                      )}
-                      {!p.inStock && (
-                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                          <span className="font-display text-white text-xs tracking-widest">OUT OF STOCK</span>
-                        </div>
-                      )}
-                    </div>
+                {productList.map((p) => {
+                  const pAny = p as any;
+                  const isPublished = pAny.published ?? false;
+                  const isHidden = pAny.hidden ?? false;
+                  const isDelisted = pAny.delisted ?? false;
+                  const isOutOfStock = !p.inStock;
 
-                    {/* Info */}
-                    <div className="p-4">
-                      <div className="flex items-start justify-between gap-2 mb-1">
-                        <p className="font-display text-white text-sm font-bold tracking-wider leading-tight">{p.name}</p>
-                        {p.featured && <Star size={12} className="text-[#FF6B00] flex-shrink-0 mt-0.5" fill="#FF6B00" />}
-                      </div>
-                      <p className="font-body text-[#888] text-xs mb-3">{p.category}</p>
-                      <div className="flex items-center gap-2 mb-4">
-                        <span className="font-display text-[#FF6B00] font-bold text-sm">${Number(p.price).toFixed(2)}</span>
-                        {p.compareAtPrice && (
-                          <span className="font-body text-[#555] text-xs line-through">${Number(p.compareAtPrice).toFixed(2)}</span>
+                  const quickToggle = (field: string, value: boolean) => {
+                    updateProduct.mutate({ id: p.id, data: { [field]: value } as any }, {
+                      onSuccess: () => { toast.success("Product updated"); refetch(); },
+                      onError: () => toast.error("Update failed"),
+                    });
+                  };
+
+                  return (
+                    <div key={p.id} className={`bg-[#1A1A1A] border overflow-hidden ${
+                      isDelisted ? "border-red-500/40" : isHidden ? "border-yellow-500/30" : isPublished ? "border-green-500/30" : "border-white/10"
+                    }`}>
+                      {/* Image */}
+                      <div className="aspect-square bg-[#2A2A2A] relative overflow-hidden">
+                        {p.imageUrl ? (
+                          <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <ImageIcon size={32} className="text-[#333]" />
+                          </div>
+                        )}
+                        {p.badge && (
+                          <span className="absolute top-2 left-2 bg-[#FF6B00] text-white font-display text-[9px] font-bold tracking-widest px-2 py-1">
+                            {p.badge}
+                          </span>
+                        )}
+                        {isDelisted && (
+                          <div className="absolute inset-0 bg-red-900/50 flex items-center justify-center">
+                            <span className="font-display text-red-300 text-xs tracking-widest">DELISTED</span>
+                          </div>
+                        )}
+                        {!isDelisted && isOutOfStock && (
+                          <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                            <span className="font-display text-white text-xs tracking-widest">OUT OF STOCK</span>
+                          </div>
+                        )}
+                        {!isDelisted && !isOutOfStock && isHidden && (
+                          <div className="absolute top-0 right-0 bg-yellow-500/80 px-2 py-1">
+                            <span className="font-display text-black text-[9px] tracking-widest">HIDDEN</span>
+                          </div>
                         )}
                       </div>
 
-                      {/* Actions */}
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => openEdit(p)}
-                          className="flex-1 admin-btn-secondary flex items-center justify-center gap-1.5 text-xs"
-                        >
-                          <Pencil size={11} /> Edit
-                        </button>
-                        <button
-                          onClick={() => confirmDelete(p.id, p.name)}
-                          disabled={deleteProduct.isPending}
-                          className="admin-btn-danger flex items-center justify-center gap-1.5 text-xs px-3"
-                        >
-                          <Trash2 size={11} />
-                        </button>
+                      {/* Info */}
+                      <div className="p-4">
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <p className="font-display text-white text-sm font-bold tracking-wider leading-tight">{p.name}</p>
+                          {p.featured && <Star size={12} className="text-[#FF6B00] flex-shrink-0 mt-0.5" fill="#FF6B00" />}
+                        </div>
+                        <p className="font-body text-[#888] text-xs mb-2">{p.category}</p>
+
+                        {/* Status badges */}
+                        <div className="flex flex-wrap gap-1 mb-3">
+                          <span className={`font-display text-[9px] tracking-widest px-2 py-0.5 ${
+                            isPublished ? "bg-green-500/20 text-green-400" : "bg-white/5 text-[#555]"
+                          }`}>{isPublished ? "PUBLISHED" : "DRAFT"}</span>
+                          {isOutOfStock && <span className="font-display text-[9px] tracking-widest px-2 py-0.5 bg-orange-500/20 text-orange-400">OUT OF STOCK</span>}
+                          {isHidden && <span className="font-display text-[9px] tracking-widest px-2 py-0.5 bg-yellow-500/20 text-yellow-400">HIDDEN</span>}
+                          {isDelisted && <span className="font-display text-[9px] tracking-widest px-2 py-0.5 bg-red-500/20 text-red-400">DELISTED</span>}
+                        </div>
+
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="font-display text-[#FF6B00] font-bold text-sm">${Number(p.price).toFixed(2)}</span>
+                          {p.compareAtPrice && (
+                            <span className="font-body text-[#555] text-xs line-through">${Number(p.compareAtPrice).toFixed(2)}</span>
+                          )}
+                        </div>
+
+                        {/* Quick-action toggles */}
+                        <div className="flex flex-wrap gap-1 mb-3">
+                          <button
+                            onClick={() => quickToggle("published", !isPublished)}
+                            className={`text-[9px] font-display tracking-widest px-2 py-1 border transition-colors ${
+                              isPublished ? "border-green-500/50 text-green-400 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/50" : "border-white/10 text-[#555] hover:bg-green-500/10 hover:text-green-400 hover:border-green-500/50"
+                            }`}
+                          >{isPublished ? "UNPUBLISH" : "PUBLISH"}</button>
+                          <button
+                            onClick={() => quickToggle("inStock", !isOutOfStock)}
+                            className={`text-[9px] font-display tracking-widest px-2 py-1 border transition-colors ${
+                              isOutOfStock ? "border-orange-500/50 text-orange-400 hover:bg-green-500/10 hover:text-green-400 hover:border-green-500/50" : "border-white/10 text-[#555] hover:bg-orange-500/10 hover:text-orange-400 hover:border-orange-500/50"
+                            }`}
+                          >{isOutOfStock ? "MARK IN STOCK" : "OUT OF STOCK"}</button>
+                          <button
+                            onClick={() => quickToggle("hidden", !isHidden)}
+                            className={`text-[9px] font-display tracking-widest px-2 py-1 border transition-colors ${
+                              isHidden ? "border-yellow-500/50 text-yellow-400 hover:border-white/10 hover:text-[#555]" : "border-white/10 text-[#555] hover:bg-yellow-500/10 hover:text-yellow-400 hover:border-yellow-500/50"
+                            }`}
+                          >{isHidden ? "UNHIDE" : "HIDE"}</button>
+                          <button
+                            onClick={() => quickToggle("delisted", !isDelisted)}
+                            className={`text-[9px] font-display tracking-widest px-2 py-1 border transition-colors ${
+                              isDelisted ? "border-red-500/50 text-red-400 hover:border-white/10 hover:text-[#555]" : "border-white/10 text-[#555] hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/50"
+                            }`}
+                          >{isDelisted ? "RELIST" : "DELIST"}</button>
+                        </div>
+
+                        {/* Edit / Delete */}
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => openEdit(p)}
+                            className="flex-1 admin-btn-secondary flex items-center justify-center gap-1.5 text-xs"
+                          >
+                            <Pencil size={11} /> Edit
+                          </button>
+                          <button
+                            onClick={() => confirmDelete(p.id, p.name)}
+                            disabled={deleteProduct.isPending}
+                            className="admin-btn-danger flex items-center justify-center gap-1.5 text-xs px-3"
+                          >
+                            <Trash2 size={11} />
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}

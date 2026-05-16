@@ -15,6 +15,13 @@
       "when": 1778935469427,
       "tag": "0001_deep_quasar",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1778937660649,
+      "tag": "0002_familiar_patriot",
+      "breakpoints": true
     }
   ]
 }

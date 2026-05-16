@@ -15,16 +15,7 @@ import { toast } from "sonner";
 const PRODUCT_HOODIE = "https://d2xsxph8kpxj0f.cloudfront.net/310519663635005932/FqJozxCqZQ4nbgjqXYB8qi/product_hoodie-mooq7Qw4za8hLYwwYeQdR6.webp";
 const PRODUCT_TSHIRT = "https://d2xsxph8kpxj0f.cloudfront.net/310519663635005932/FqJozxCqZQ4nbgjqXYB8qi/product_tshirt-ZUmrE26ymPLdjN4UWhFo7C.webp";
 
-const FALLBACK_PRODUCTS = [
-  { id: 1, name: "Build Level Core Hoodie", category: "hoodies", price: 89, imageUrl: PRODUCT_HOODIE, badge: "BEST SELLER", sizes: ["S","M","L","XL","XXL"], inStock: true, featured: true, compareAtPrice: null },
-  { id: 2, name: "Execute Daily Tee", category: "t-shirts", price: 45, imageUrl: PRODUCT_TSHIRT, badge: "NEW DROP", sizes: ["S","M","L","XL","XXL"], inStock: true, featured: false, compareAtPrice: null },
-  { id: 3, name: "Discipline Heavyweight Hoodie", category: "hoodies", price: 95, imageUrl: PRODUCT_HOODIE, badge: "LIMITED", sizes: ["S","M","L","XL","XXL"], inStock: true, featured: true, compareAtPrice: null },
-  { id: 4, name: "Built Different Tee", category: "t-shirts", price: 42, imageUrl: PRODUCT_TSHIRT, badge: null, sizes: ["S","M","L","XL","XXL"], inStock: true, featured: false, compareAtPrice: null },
-  { id: 5, name: "Focus Snapback Hat", category: "hats", price: 38, imageUrl: PRODUCT_TSHIRT, badge: null, sizes: ["S","M","L","XL","XXL"], inStock: true, featured: false, compareAtPrice: null },
-  { id: 6, name: "Lock In Trucker Cap", category: "hats", price: 35, imageUrl: PRODUCT_TSHIRT, badge: "NEW DROP", sizes: ["S","M","L","XL","XXL"], inStock: true, featured: false, compareAtPrice: null },
-  { id: 7, name: "Execute Wristband Set", category: "accessories", price: 18, imageUrl: PRODUCT_HOODIE, badge: null, sizes: ["One Size"], inStock: true, featured: false, compareAtPrice: null },
-  { id: 8, name: "Build Level Tote Bag", category: "accessories", price: 28, imageUrl: PRODUCT_HOODIE, badge: null, sizes: ["One Size"], inStock: true, featured: false, compareAtPrice: null },
-];
+// No fallback products — all products are managed via the admin panel
 
 const categories = ["All", "Hoodies", "T-Shirts", "Hats", "Accessories"];
 const SIZES = ["S", "M", "L", "XL", "XXL"];
@@ -36,8 +27,10 @@ export default function Shop() {
 
   const { data: dbProducts, isLoading: productsLoading } = trpc.products.list.useQuery({});
 
-  // Use DB products if available, otherwise fall back to hardcoded
-  const allProducts = (dbProducts && dbProducts.length > 0) ? dbProducts : FALLBACK_PRODUCTS;
+  // Only show published, non-hidden, non-delisted products from the database
+  const allProducts = (dbProducts || []).filter((p: any) =>
+    p.published !== false && p.hidden !== true && p.delisted !== true
+  );
 
   // Pre-select first size for each product on load
   useEffect(() => {
@@ -123,6 +116,19 @@ export default function Shop() {
       {/* Product Grid */}
       <section className="py-16">
         <div className="max-w-[1280px] mx-auto px-6 lg:px-10">
+          {productsLoading && (
+            <div className="flex items-center justify-center py-24">
+              <Loader2 size={32} className="text-[#FF6B00] animate-spin" />
+            </div>
+          )}
+          {!productsLoading && allProducts.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-24 text-center">
+              <ShoppingBag size={48} className="text-[#333] mb-4" />
+              <p className="font-display text-[#555] text-lg tracking-widest mb-2">NEW DROPS COMING SOON</p>
+              <p className="font-body text-[#444] text-sm">Check back soon for the latest gear.</p>
+            </div>
+          )}
+          {!productsLoading && allProducts.length > 0 && (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {filtered.map((product, i) => (
               <div
@@ -196,6 +202,7 @@ export default function Shop() {
               </div>
             ))}
           </div>
+          )}
         </div>
       </section>
 

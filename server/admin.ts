@@ -30,6 +30,9 @@ const productInput = z.object({
   imageUrl: z.string().optional(),
   badge: z.string().optional(),
   inStock: z.boolean().default(true),
+  published: z.boolean().default(false),
+  hidden: z.boolean().default(false),
+  delisted: z.boolean().default(false),
   featured: z.boolean().default(false),
   sortOrder: z.number().default(0),
   shopifyVariantId: z.string().optional(),
@@ -61,6 +64,9 @@ export const adminRouter = router({
       imageUrl: input.imageUrl ?? null,
       badge: input.badge ?? null,
       inStock: input.inStock,
+      published: input.published,
+      hidden: input.hidden,
+      delisted: input.delisted,
       featured: input.featured,
       sortOrder: input.sortOrder,
       shopifyVariantId: input.shopifyVariantId ?? null,
@@ -86,6 +92,9 @@ export const adminRouter = router({
       if (input.data.imageUrl !== undefined) updateData.imageUrl = input.data.imageUrl;
       if (input.data.badge !== undefined) updateData.badge = input.data.badge;
       if (input.data.inStock !== undefined) updateData.inStock = input.data.inStock;
+      if (input.data.published !== undefined) updateData.published = input.data.published;
+      if (input.data.hidden !== undefined) updateData.hidden = input.data.hidden;
+      if (input.data.delisted !== undefined) updateData.delisted = input.data.delisted;
       if (input.data.featured !== undefined) updateData.featured = input.data.featured;
       if (input.data.sortOrder !== undefined) updateData.sortOrder = input.data.sortOrder;
       if (input.data.shopifyVariantId !== undefined) updateData.shopifyVariantId = input.data.shopifyVariantId;

@@ -1,0 +1,9 @@
+{
+  "query": "ALTER TABLE products ADD COLUMN published BOOLEAN NOT NULL DEFAULT FALSE;\nALTER TABLE products ADD COLUMN hidden BOOLEAN NOT NULL DEFAULT FALSE;\nALTER TABLE products ADD COLUMN delisted BOOLEAN NOT NULL DEFAULT FALSE;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway06.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3yjy74Aq4fSfMvH.root --database ZpCxvttgRWUJYjQSvWcg6k --execute ALTER TABLE products ADD COLUMN published BOOLEAN NOT NULL DEFAULT FALSE;\nALTER TABLE products ADD COLUMN hidden BOOLEAN NOT NULL DEFAULT FALSE;\nALTER TABLE products ADD COLUMN delisted BOOLEAN NOT NULL DEFAULT FALSE;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1209
+}
