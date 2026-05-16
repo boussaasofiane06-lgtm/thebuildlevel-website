@@ -14,6 +14,9 @@ const redirectToLoginIfUnauthorized = (error: unknown) => {
   if (!(error instanceof TRPCClientError)) return;
   if (typeof window === "undefined") return;
 
+  // Never redirect to OAuth login from the admin page — it uses password auth
+  if (window.location.pathname.startsWith("/admin")) return;
+
   const isUnauthorized = error.message === UNAUTHED_ERR_MSG;
 
   if (!isUnauthorized) return;
@@ -37,11 +40,18 @@ queryClient.getMutationCache().subscribe(event => {
   }
 });
 
+const ADMIN_SESSION_KEY = "bl_admin_unlocked";
+const ADMIN_TOKEN_KEY = "bl_admin_token";
+
 const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
       url: `${import.meta.env.VITE_API_URL || ""}/api/trpc`,
       transformer: superjson,
+      headers() {
+        const token = sessionStorage.getItem(ADMIN_TOKEN_KEY);
+        return token ? { "x-admin-token": token } : {};
+      },
       fetch(input, init) {
         return globalThis.fetch(input, {
           ...(init ?? {}),

@@ -7,14 +7,36 @@
 import { TRPCError } from "@trpc/server";
 import { eq, asc } from "drizzle-orm";
 import { z } from "zod";
+import { scryptSync, timingSafeEqual } from "crypto";
 import { products, siteSettings } from "../drizzle/schema";
 import { getDb } from "./db";
-import { protectedProcedure, router } from "./_core/trpc";
+import { publicProcedure, router } from "./_core/trpc";
 
-// Admin-only middleware
-const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== "admin") {
-    throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+// Admin password verification — uses ADMIN_PASSWORD_HASH env var (scrypt format: salt:hash)
+function verifyAdminToken(token: string): boolean {
+  try {
+    const stored = process.env.ADMIN_PASSWORD_HASH;
+    if (!stored) return false;
+    const colonIdx = stored.indexOf(":");
+    if (colonIdx === -1) return false;
+    const salt = stored.substring(0, colonIdx);
+    const storedHash = stored.substring(colonIdx + 1);
+    const keyLen = storedHash.length / 2;
+    const derived = scryptSync(token, salt, keyLen);
+    const derivedHex = derived.toString("hex");
+    // Timing-safe comparison
+    return timingSafeEqual(Buffer.from(derivedHex), Buffer.from(storedHash));
+  } catch {
+    return false;
+  }
+}
+
+// Admin-only middleware — password token passed in header x-admin-token
+const adminProcedure = publicProcedure.use(({ ctx, next }) => {
+  const req = (ctx as any).req;
+  const token = req?.headers?.["x-admin-token"] as string | undefined;
+  if (!token || !verifyAdminToken(token)) {
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "Admin access required" });
   }
   return next({ ctx });
 });

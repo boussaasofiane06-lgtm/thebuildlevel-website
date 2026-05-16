@@ -70,6 +70,7 @@ async function checkPassword(input: string): Promise<boolean> {
 }
 
 const ADMIN_SESSION_KEY = "bl_admin_unlocked";
+const ADMIN_TOKEN_KEY = "bl_admin_token";
 
 function AdminPasswordLogin({ onSuccess }: { onSuccess: () => void }) {
   const [password, setPassword] = useState("");
@@ -84,6 +85,8 @@ function AdminPasswordLogin({ onSuccess }: { onSuccess: () => void }) {
       const ok = await checkPassword(password);
       if (ok) {
         sessionStorage.setItem(ADMIN_SESSION_KEY, "1");
+        // Store raw password as token so backend can verify it via x-admin-token header
+        sessionStorage.setItem(ADMIN_TOKEN_KEY, password);
         onSuccess();
       } else {
         setError("Incorrect password. Try again.");
