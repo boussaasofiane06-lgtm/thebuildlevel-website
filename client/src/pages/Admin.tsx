@@ -1399,7 +1399,6 @@ export default function Admin() {
             { id: "affiliate", label: "AFFILIATE", icon: Link2 },
             { id: "membership", label: "MEMBERSHIP", icon: Users },
             { id: "settings", label: "SETTINGS", icon: Settings },
-            { id: "integrations", label: "INTEGRATIONS", icon: ExternalLink },
           ].map(({ id, label, icon: Icon }) => (
             <button
               key={id}
