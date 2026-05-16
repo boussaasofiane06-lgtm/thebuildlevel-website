@@ -1,0 +1,9 @@
+{
+  "query": "INSERT INTO products (name, description, price, category, sizes, imageUrl, inStock, published, hidden, delisted, featured, sortOrder, createdAt, updatedAt) VALUES ('Test Hoodie', 'Premium hoodie', 59.99, 'apparel', '[\"S\",\"M\",\"L\",\"XL\"]', 'https://via.placeholder.com/400', 1, 1, 0, 0, 0, 0, NOW(), NOW());",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway06.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3yjy74Aq4fSfMvH.root --database ZpCxvttgRWUJYjQSvWcg6k --execute INSERT INTO products (name, description, price, category, sizes, imageUrl, inStock, published, hidden, delisted, featured, sortOrder, createdAt, updatedAt) VALUES ('Test Hoodie', 'Premium hoodie', 59.99, 'apparel', '[\"S\",\"M\",\"L\",\"XL\"]', 'https://via.placeholder.com/400', 1, 1, 0, 0, 0, 0, NOW(), NOW());",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1110
+}
