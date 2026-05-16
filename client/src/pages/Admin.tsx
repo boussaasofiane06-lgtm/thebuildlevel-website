@@ -84,8 +84,18 @@ function AdminPasswordLogin({ onSuccess }: { onSuccess: () => void }) {
     try {
       const ok = await checkPassword(password);
       if (ok) {
+        // Also call backend login to set the JWT cookie (needed for file uploads)
+        try {
+          await fetch("/api/admin/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ password }),
+          });
+        } catch {
+          // Non-fatal: cookie login failed but local session still works
+        }
         sessionStorage.setItem(ADMIN_SESSION_KEY, "1");
-        // Store raw password as token so backend can verify it via x-admin-token header
         sessionStorage.setItem(ADMIN_TOKEN_KEY, password);
         onSuccess();
       } else {
@@ -172,43 +182,31 @@ function ProductModal({
 
   const [uploading, setUploading] = useState(false);
 
-  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) {
       toast.error("Please select an image file");
       return;
     }
-    if (file.size > 16 * 1024 * 1024) {
-      toast.error("Image must be under 16MB");
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be under 5MB");
       return;
     }
     setUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append("image", file);
-      const token = sessionStorage.getItem("bl_admin_token") || "";
-      const apiBase = import.meta.env.VITE_API_URL || "";
-      const res = await fetch(`${apiBase}/api/admin/upload-image`, {
-        method: "POST",
-        headers: token ? { "x-admin-token": token } : {},
-        credentials: "include",
-        body: formData,
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Upload failed" }));
-        throw new Error(err.error || "Upload failed");
-      }
-      const { url } = await res.json();
-      setForm((f) => ({ ...f, imageUrl: url }));
-      toast.success("Image uploaded successfully!");
-    } catch (err: any) {
-      toast.error(err?.message || "Image upload failed");
-    } finally {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      setForm((f) => ({ ...f, imageUrl: dataUrl }));
+      toast.success("Image ready!");
       setUploading(false);
-      // Reset file input so same file can be re-selected
       if (fileRef.current) fileRef.current.value = "";
-    }
+    };
+    reader.onerror = () => {
+      toast.error("Failed to read image");
+      setUploading(false);
+    };
+    reader.readAsDataURL(file);
   };
 
   return (
@@ -855,6 +853,26 @@ function DigitalTab() {
   };
   const closeForm = () => { setShowForm(false); setFormData(EMPTY_FORM); };
 
+  const [digitalImgUploading, setDigitalImgUploading] = useState(false);
+  const digitalImgRef = useRef<HTMLInputElement>(null);
+
+  const handleDigitalImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { toast.error("Please select an image file"); return; }
+    if (file.size > 5 * 1024 * 1024) { toast.error("Image must be under 5MB"); return; }
+    setDigitalImgUploading(true);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setField('imageUrl', reader.result as string);
+      toast.success("Image ready!");
+      setDigitalImgUploading(false);
+      if (digitalImgRef.current) digitalImgRef.current.value = "";
+    };
+    reader.onerror = () => { toast.error("Failed to read image"); setDigitalImgUploading(false); };
+    reader.readAsDataURL(file);
+  };
+
   const handleSave = () => {
     if (!formData.name || !formData.price) { toast.error("Name and price are required"); return; }
     const price = parseFloat(formData.price);
@@ -919,8 +937,18 @@ function DigitalTab() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="font-display text-[#888] text-[10px] tracking-widest block mb-1">PRODUCT IMAGE URL</label>
-              <input value={formData.imageUrl} onChange={e => setField('imageUrl', e.target.value)} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00]" placeholder="https://... (cover image)" />
+              <label className="font-display text-[#888] text-[10px] tracking-widest block mb-1">PRODUCT IMAGE</label>
+              <div className="flex items-center gap-2 mb-2">
+                {formData.imageUrl && (
+                  <img src={formData.imageUrl} alt="preview" className="w-12 h-12 object-cover border border-white/10 flex-shrink-0" />
+                )}
+                <input ref={digitalImgRef} type="file" accept="image/*" onChange={handleDigitalImage} className="hidden" />
+                <button type="button" onClick={() => digitalImgRef.current?.click()} disabled={digitalImgUploading}
+                  className="bg-[#2A2A2A] border border-white/10 text-white font-display text-[10px] tracking-widest px-3 py-2 hover:border-[#FF6B00] transition-colors flex items-center gap-1 disabled:opacity-50">
+                  {digitalImgUploading ? "LOADING..." : "UPLOAD FROM DEVICE"}
+                </button>
+              </div>
+              <input value={formData.imageUrl.startsWith('data:') ? '' : formData.imageUrl} onChange={e => setField('imageUrl', e.target.value)} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00]" placeholder="Or paste image URL" />
             </div>
             <div>
               <label className="font-display text-[#888] text-[10px] tracking-widest block mb-1">FILE NAME (shown to buyer)</label>

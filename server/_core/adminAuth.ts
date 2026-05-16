@@ -10,7 +10,6 @@ import path from "path";
 import type { Express, Request, Response } from "express";
 import { SignJWT, jwtVerify } from "jose";
 import multer from "multer";
-import { storagePut } from "../storage";
 import { ENV } from "./env";
 
 // Multer: store file in memory for S3 upload
@@ -157,11 +156,11 @@ export function registerAdminAuthRoutes(app: Express) {
         return;
       }
 
-      const ext = path.extname(file.originalname).toLowerCase() || ".jpg";
-      const key = `product-images/${Date.now()}${ext}`;
-      const { url } = await storagePut(key, file.buffer, file.mimetype);
+      // Convert to base64 data URL — no external storage needed
+      const base64 = file.buffer.toString("base64");
+      const dataUrl = `data:${file.mimetype};base64,${base64}`;
 
-      res.json({ url });
+      res.json({ url: dataUrl });
     } catch (err: any) {
       console.error("[upload-image] Error:", err);
       res.status(500).json({ error: err?.message || "Upload failed" });
