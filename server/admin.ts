@@ -11,9 +11,10 @@ import { scryptSync, timingSafeEqual } from "crypto";
 import { products, siteSettings } from "../drizzle/schema";
 import { getDb } from "./db";
 import { publicProcedure, router } from "./_core/trpc";
+import { verifyAdminToken as verifyAdminJwt, ADMIN_COOKIE } from "./_core/adminAuth";
 
 // Admin password verification — uses ADMIN_PASSWORD_HASH env var (scrypt format: salt:hash)
-function verifyAdminToken(token: string): boolean {
+function verifyRawPassword(token: string): boolean {
   try {
     const stored = process.env.ADMIN_PASSWORD_HASH;
     if (!stored) return false;
@@ -24,21 +25,37 @@ function verifyAdminToken(token: string): boolean {
     const keyLen = storedHash.length / 2;
     const derived = scryptSync(token, salt, keyLen);
     const derivedHex = derived.toString("hex");
-    // Timing-safe comparison
     return timingSafeEqual(Buffer.from(derivedHex), Buffer.from(storedHash));
   } catch {
     return false;
   }
 }
 
-// Admin-only middleware — password token passed in header x-admin-token
-const adminProcedure = publicProcedure.use(({ ctx, next }) => {
-  const req = (ctx as any).req;
-  const token = req?.headers?.["x-admin-token"] as string | undefined;
-  if (!token || !verifyAdminToken(token)) {
-    throw new TRPCError({ code: "UNAUTHORIZED", message: "Admin access required" });
+function parseCookieHeader(header: string | undefined): Map<string, string> {
+  if (!header) return new Map();
+  const map = new Map<string, string>();
+  for (const part of header.split(";")) {
+    const [k, ...v] = part.trim().split("=");
+    if (k) map.set(k.trim(), decodeURIComponent(v.join("=")));
   }
-  return next({ ctx });
+  return map;
+}
+
+// Admin-only middleware — accepts JWT cookie OR raw password header
+const adminProcedure = publicProcedure.use(async ({ ctx, next }) => {
+  const req = (ctx as any).req;
+  // Check JWT cookie first (set by /api/admin/login)
+  const cookies = parseCookieHeader(req?.headers?.cookie);
+  const cookieToken = cookies.get(ADMIN_COOKIE);
+  if (cookieToken && await verifyAdminJwt(cookieToken)) {
+    return next({ ctx });
+  }
+  // Fallback: raw password in x-admin-token header
+  const headerToken = req?.headers?.["x-admin-token"] as string | undefined;
+  if (headerToken && verifyRawPassword(headerToken)) {
+    return next({ ctx });
+  }
+  throw new TRPCError({ code: "UNAUTHORIZED", message: "Admin access required" });
 });
 
 // Zod schemas
