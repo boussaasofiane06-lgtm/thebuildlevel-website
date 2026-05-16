@@ -7,14 +7,46 @@ import { ENV } from './_core/env';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let _db: any = null;
 
+// Parse DATABASE_URL and handle SSL params that mysql2 can't read from URL string.
+// TiDB Cloud uses ?ssl={"rejectUnauthorized":true} or ?ssl=require which mysql2 ignores.
+function buildPoolConfig(rawUrl: string): mysql.PoolOptions {
+  try {
+    const parsed = new URL(rawUrl);
+    const sslParam = parsed.searchParams.get('ssl');
+    if (!sslParam) {
+      return { uri: rawUrl };
+    }
+    // Remove ssl from URL, pass it as object
+    parsed.searchParams.delete('ssl');
+    const cleanUrl = parsed.toString();
+    let sslConfig: mysql.SslOptions;
+    if (sslParam === 'require' || sslParam === 'true') {
+      sslConfig = { rejectUnauthorized: false };
+    } else {
+      try {
+        sslConfig = JSON.parse(sslParam);
+      } catch {
+        sslConfig = { rejectUnauthorized: false };
+      }
+    }
+    return { uri: cleanUrl, ssl: sslConfig };
+  } catch {
+    return { uri: rawUrl };
+  }
+}
+
 // Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      const pool = mysql.createPool(process.env.DATABASE_URL);
+      const config = buildPoolConfig(process.env.DATABASE_URL);
+      const pool = mysql.createPool(config);
+      // Verify connection works
+      await pool.query('SELECT 1');
       _db = drizzle(pool);
+      console.log("[Database] Connected successfully");
     } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
+      console.error("[Database] Failed to connect:", error);
       _db = null;
     }
   }
