@@ -1,0 +1,1 @@
+ALTER TABLE "digital_products" ADD COLUMN "stripePaymentLink" text;

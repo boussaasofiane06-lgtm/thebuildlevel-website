@@ -1,0 +1,9 @@
+{
+  "query": "UPDATE digital_products SET stripePaymentLink = 'https://buy.stripe.com/test_4gMcN55ok4eK3Qj7hU6wE02' WHERE id = 1;\nUPDATE digital_products SET stripePaymentLink = 'https://buy.stripe.com/test_00w5kD7ws5iO2Mf9q26wE03' WHERE id = 30001;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway06.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3yjy74Aq4fSfMvH.root --database ZpCxvttgRWUJYjQSvWcg6k --execute UPDATE digital_products SET stripePaymentLink = 'https://buy.stripe.com/test_4gMcN55ok4eK3Qj7hU6wE02' WHERE id = 1;\nUPDATE digital_products SET stripePaymentLink = 'https://buy.stripe.com/test_00w5kD7ws5iO2Mf9q26wE03' WHERE id = 30001;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 276
+}

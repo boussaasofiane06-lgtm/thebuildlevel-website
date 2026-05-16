@@ -776,31 +776,40 @@ function BlogTab() {
 const DIGITAL_CATEGORIES = ["guide", "workout", "nutrition", "mindset", "wallpaper"];
 
 function DigitalTab() {
-  const [showForm, setShowForm] = useState(false);
-  const [editItem, setEditItem] = useState<null | {
+  type FormData = {
     id?: number; name: string; description: string; price: string;
     category: string; productType: string; imageUrl: string; fileUrl: string; fileName: string;
-    audioUrl: string; duration: string; badge: string; published: boolean;
-  }>(null);
+    audioUrl: string; duration: string; badge: string; stripePaymentLink: string; published: boolean;
+  };
+  const EMPTY_FORM: FormData = { name: "", description: "", price: "", category: "guide", productType: "pdf", imageUrl: "", fileUrl: "", fileName: "", audioUrl: "", duration: "", badge: "", stripePaymentLink: "", published: false };
 
-  const EMPTY_ITEM = { name: "", description: "", price: "", category: "guide", productType: "pdf", imageUrl: "", fileUrl: "", fileName: "", audioUrl: "", duration: "", badge: "", published: false };
+  const [showForm, setShowForm] = useState(false);
+  const [formData, setFormData] = useState<FormData>(EMPTY_FORM);
 
   const { data: items = [], refetch } = trpc.digital.adminList.useQuery();
-  const createItem = trpc.digital.adminCreate.useMutation({ onSuccess: () => { toast.success("Product created!"); setShowForm(false); refetch(); } });
-  const updateItem = trpc.digital.adminUpdate.useMutation({ onSuccess: () => { toast.success("Product updated!"); setEditItem(null); refetch(); } });
+  const createItem = trpc.digital.adminCreate.useMutation({ onSuccess: () => { toast.success("Product created!"); setShowForm(false); setFormData(EMPTY_FORM); refetch(); } });
+  const updateItem = trpc.digital.adminUpdate.useMutation({ onSuccess: () => { toast.success("Product updated!"); setShowForm(false); setFormData(EMPTY_FORM); refetch(); } });
   const deleteItem = trpc.digital.adminDelete.useMutation({ onSuccess: () => { toast.success("Product deleted"); refetch(); } });
 
-  const form = editItem || (showForm ? EMPTY_ITEM : null);
+  const setField = (field: keyof FormData, value: string | boolean) =>
+    setFormData(p => ({ ...p, [field]: value }));
+
+  const openAdd = () => { setFormData(EMPTY_FORM); setShowForm(true); };
+  const openEdit = (item: any) => {
+    setFormData({ id: item.id, name: item.name, description: item.description || "", price: String(item.price), category: item.category || "guide", productType: item.productType || "pdf", imageUrl: item.imageUrl || "", fileUrl: item.fileUrl || "", fileName: item.fileName || "", audioUrl: item.audioUrl || "", duration: item.duration || "", badge: item.badge || "", stripePaymentLink: item.stripePaymentLink || "", published: item.published ?? false });
+    setShowForm(true);
+  };
+  const closeForm = () => { setShowForm(false); setFormData(EMPTY_FORM); };
 
   const handleSave = () => {
-    if (!form) return;
-    if (!form.name || !form.price) { toast.error("Name and price are required"); return; }
-    const price = parseFloat(form.price);
+    if (!formData.name || !formData.price) { toast.error("Name and price are required"); return; }
+    const price = parseFloat(formData.price);
     if (isNaN(price) || price < 0) { toast.error("Invalid price"); return; }
-    if (editItem?.id) {
-      updateItem.mutate({ id: editItem.id, name: form.name, description: form.description || undefined, price, category: form.category, imageUrl: form.imageUrl || undefined, fileUrl: form.fileUrl || undefined, fileName: form.fileName || undefined, badge: form.badge || undefined, published: form.published });
+    const payload = { name: formData.name, description: formData.description || undefined, price, category: formData.category, imageUrl: formData.imageUrl || undefined, fileUrl: formData.fileUrl || undefined, fileName: formData.fileName || undefined, badge: formData.badge || undefined, stripePaymentLink: formData.stripePaymentLink || undefined, published: formData.published };
+    if (formData.id) {
+      updateItem.mutate({ id: formData.id, ...payload });
     } else {
-      createItem.mutate({ name: form.name, description: form.description || undefined, price, category: form.category, imageUrl: form.imageUrl || undefined, fileUrl: form.fileUrl || undefined, fileName: form.fileName || undefined, badge: form.badge || undefined, published: form.published });
+      createItem.mutate(payload);
     }
   };
 
@@ -811,28 +820,28 @@ function DigitalTab() {
           <h1 className="font-display text-white font-bold tracking-widest text-lg">DIGITAL PRODUCTS</h1>
           <p className="font-body text-[#555] text-sm mt-1">{items.length} products total</p>
         </div>
-        <button onClick={() => { setShowForm(true); setEditItem(null); }} className="admin-btn-primary flex items-center gap-2">
+        <button onClick={openAdd} className="admin-btn-primary flex items-center gap-2">
           <Plus size={14} /> ADD PRODUCT
         </button>
       </div>
 
       {/* Form */}
-      {(showForm || editItem) && (
+      {showForm && (
         <div className="bg-[#1A1A1A] border border-[#FF6B00]/30 p-6 mb-6 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="font-display text-[#888] text-[10px] tracking-widest block mb-1">NAME *</label>
-              <input value={form?.name || ""} onChange={e => { const v = e.target.value; if (editItem) setEditItem(p => p ? { ...p, name: v } : null); }} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00]" placeholder="e.g. 12-Week Workout Plan" />
+              <input value={formData.name} onChange={e => setField('name', e.target.value)} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00]" placeholder="e.g. 12-Week Workout Plan" />
             </div>
             <div>
               <label className="font-display text-[#888] text-[10px] tracking-widest block mb-1">PRICE (USD) *</label>
-              <input type="number" min="0" step="0.01" value={form?.price || ""} onChange={e => { const v = e.target.value; if (editItem) setEditItem(p => p ? { ...p, price: v } : null); }} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00]" placeholder="9.99" />
+              <input type="number" min="0" step="0.01" value={formData.price} onChange={e => setField('price', e.target.value)} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00]" placeholder="9.99" />
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="font-display text-[#888] text-[10px] tracking-widest block mb-1">PRODUCT TYPE</label>
-              <select value={(form as any)?.productType || "pdf"} onChange={e => { const v = e.target.value; if (editItem) setEditItem(p => p ? { ...p, productType: v } : null); else setShowForm(true); }} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00]">
+              <select value={formData.productType} onChange={e => setField('productType', e.target.value)} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00]">
                 <option value="pdf">PDF Guide</option>
                 <option value="audiobook">Audiobook</option>
                 <option value="video">Video</option>
@@ -841,54 +850,59 @@ function DigitalTab() {
             </div>
             <div>
               <label className="font-display text-[#888] text-[10px] tracking-widest block mb-1">CATEGORY</label>
-              <select value={form?.category || "guide"} onChange={e => { const v = e.target.value; if (editItem) setEditItem(p => p ? { ...p, category: v } : null); }} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00]">
+              <select value={formData.category} onChange={e => setField('category', e.target.value)} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00]">
                 {DIGITAL_CATEGORIES.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
               </select>
             </div>
             <div>
               <label className="font-display text-[#888] text-[10px] tracking-widest block mb-1">BADGE (optional)</label>
-              <input value={form?.badge || ""} onChange={e => { const v = e.target.value; if (editItem) setEditItem(p => p ? { ...p, badge: v } : null); }} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00]" placeholder="e.g. BESTSELLER, NEW" />
+              <input value={formData.badge} onChange={e => setField('badge', e.target.value)} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00]" placeholder="e.g. BESTSELLER, NEW" />
             </div>
           </div>
           <div>
             <label className="font-display text-[#888] text-[10px] tracking-widest block mb-1">DESCRIPTION</label>
-            <textarea value={form?.description || ""} onChange={e => { const v = e.target.value; if (editItem) setEditItem(p => p ? { ...p, description: v } : null); }} rows={3} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00] resize-y" placeholder="What's included in this product?" />
+            <textarea value={formData.description} onChange={e => setField('description', e.target.value)} rows={3} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00] resize-y" placeholder="What's included in this product?" />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="font-display text-[#888] text-[10px] tracking-widest block mb-1">PRODUCT IMAGE URL</label>
-              <input value={form?.imageUrl || ""} onChange={e => { const v = e.target.value; if (editItem) setEditItem(p => p ? { ...p, imageUrl: v } : null); }} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00]" placeholder="https://... (cover image)" />
+              <input value={formData.imageUrl} onChange={e => setField('imageUrl', e.target.value)} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00]" placeholder="https://... (cover image)" />
             </div>
             <div>
               <label className="font-display text-[#888] text-[10px] tracking-widest block mb-1">FILE NAME (shown to buyer)</label>
-              <input value={form?.fileName || ""} onChange={e => { const v = e.target.value; if (editItem) setEditItem(p => p ? { ...p, fileName: v } : null); }} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00]" placeholder="e.g. workout-plan.pdf" />
+              <input value={formData.fileName} onChange={e => setField('fileName', e.target.value)} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00]" placeholder="e.g. workout-plan.pdf" />
             </div>
           </div>
           <div>
             <label className="font-display text-[#888] text-[10px] tracking-widest block mb-1">DOWNLOAD FILE URL (PDF, MP3, or any file link)</label>
-            <input value={form?.fileUrl || ""} onChange={e => { const v = e.target.value; if (editItem) setEditItem(p => p ? { ...p, fileUrl: v } : null); }} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00]" placeholder="https://... (Google Drive, Dropbox, or direct file link)" />
+            <input value={formData.fileUrl} onChange={e => setField('fileUrl', e.target.value)} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00]" placeholder="https://... (Google Drive, Dropbox, or direct file link)" />
           </div>
-          {((form as any)?.productType === "audiobook" || (form as any)?.productType === "video") && (
+          <div>
+            <label className="font-display text-[#888] text-[10px] tracking-widest block mb-1">STRIPE PAYMENT LINK (buy.stripe.com/...)</label>
+            <input value={formData.stripePaymentLink} onChange={e => setField('stripePaymentLink', e.target.value)} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00]" placeholder="https://buy.stripe.com/... (paste your Stripe Payment Link)" />
+            <p className="font-body text-[#444] text-[10px] mt-1">Create payment links at dashboard.stripe.com → Payment Links. Customers click BUY NOW and go directly to this link.</p>
+          </div>
+          {(formData.productType === "audiobook" || formData.productType === "video") && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="font-display text-[#888] text-[10px] tracking-widest block mb-1">AUDIO/VIDEO STREAM URL (for preview player)</label>
-                <input value={(form as any)?.audioUrl || ""} onChange={e => { const v = e.target.value; if (editItem) setEditItem(p => p ? { ...p, audioUrl: v } : null); }} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00]" placeholder="https://... (MP3 or audio stream URL)" />
+                <input value={formData.audioUrl} onChange={e => setField('audioUrl', e.target.value)} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00]" placeholder="https://... (MP3 or audio stream URL)" />
               </div>
               <div>
                 <label className="font-display text-[#888] text-[10px] tracking-widest block mb-1">DURATION (e.g. 2h 30min)</label>
-                <input value={(form as any)?.duration || ""} onChange={e => { const v = e.target.value; if (editItem) setEditItem(p => p ? { ...p, duration: v } : null); }} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00]" placeholder="e.g. 2h 30min" />
+                <input value={formData.duration} onChange={e => setField('duration', e.target.value)} className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2 outline-none focus:border-[#FF6B00]" placeholder="e.g. 2h 30min" />
               </div>
             </div>
           )}
           <div className="flex items-center justify-between">
             <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={form?.published || false} onChange={e => { const v = e.target.checked; if (editItem) setEditItem(p => p ? { ...p, published: v } : null); }} className="accent-[#FF6B00]" />
+              <input type="checkbox" checked={formData.published} onChange={e => setField('published', e.target.checked)} className="accent-[#FF6B00]" />
               <span className="font-display text-[#888] text-xs tracking-widest">PUBLISH (visible to customers)</span>
             </label>
             <div className="flex gap-2">
-              <button onClick={() => { setShowForm(false); setEditItem(null); }} className="admin-btn-secondary">CANCEL</button>
+              <button onClick={closeForm} className="admin-btn-secondary">CANCEL</button>
               <button onClick={handleSave} disabled={createItem.isPending || updateItem.isPending} className="admin-btn-primary flex items-center gap-2">
-                <Save size={12} /> {editItem?.id ? "UPDATE" : "CREATE"}
+                <Save size={12} /> {formData.id ? "UPDATE" : "CREATE"}
               </button>
             </div>
           </div>
@@ -896,7 +910,7 @@ function DigitalTab() {
       )}
 
       {/* Item List */}
-      {items.length === 0 && !showForm ? (
+      {items.length === 0 && !showForm && !formData.id ? (
         <div className="bg-[#1A1A1A] border border-white/10 border-dashed p-12 text-center">
           <Download size={32} className="text-[#333] mx-auto mb-3" />
           <p className="font-display text-[#555] text-sm tracking-widest">NO DIGITAL PRODUCTS YET</p>
@@ -917,7 +931,7 @@ function DigitalTab() {
                 <p className="font-body text-[#555] text-xs mt-0.5">${item.price.toFixed(2)} · {item.fileUrl ? "File linked ✓" : "No file linked"}</p>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
-                <button onClick={() => { setEditItem({ id: item.id, name: item.name, description: item.description || "", price: String(item.price), category: item.category || "guide", productType: (item as any).productType || "pdf", imageUrl: item.imageUrl || "", fileUrl: item.fileUrl || "", fileName: item.fileName || "", audioUrl: (item as any).audioUrl || "", duration: (item as any).duration || "", badge: item.badge || "", published: item.published ?? false }); setShowForm(false); }} className="p-1.5 text-[#555] hover:text-white transition-colors">
+                <button onClick={() => openEdit(item)} className="p-1.5 text-[#555] hover:text-white transition-colors">
                   <Pencil size={14} />
                 </button>
                 <button onClick={() => { if (window.confirm(`Delete "${item.name}"?`)) deleteItem.mutate({ id: item.id }); }} className="p-1.5 text-[#555] hover:text-red-400 transition-colors">

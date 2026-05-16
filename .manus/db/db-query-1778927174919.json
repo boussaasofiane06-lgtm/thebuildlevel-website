@@ -1,0 +1,20 @@
+{
+  "query": "SELECT id, name, price FROM digital_products ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway06.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3yjy74Aq4fSfMvH.root --database ZpCxvttgRWUJYjQSvWcg6k --execute SELECT id, name, price FROM digital_products ORDER BY id;",
+  "rows": [
+    {
+      "id": "1",
+      "name": "DISCIPLINE MINDSET: Control Your Mind. Master Your Life.",
+      "price": "19.99"
+    },
+    {
+      "id": "30001",
+      "name": "EXECUTION OVER EMOTION: Act First. Feel Later. Win Always.",
+      "price": "19.99"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tprice\n1\tDISCIPLINE MINDSET: Control Your Mind. Master Your Life.\t19.99\n30001\tEXECUTION OVER EMOTION: Act First. Feel Later. Win Always.\t19.99\n",
+  "stderr": "",
+  "execution_time_ms": 1258
+}

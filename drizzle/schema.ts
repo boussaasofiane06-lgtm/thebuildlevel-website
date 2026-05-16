@@ -88,6 +88,7 @@ export const digitalProducts = pgTable("digital_products", {
   audioUrl: text("audioUrl"),
   duration: varchar("duration", { length: 32 }),
   badge: varchar("badge", { length: 64 }),
+  stripePaymentLink: text("stripePaymentLink"),
   published: boolean("published").notNull().default(false),
   sortOrder: integer("sortOrder").notNull().default(0),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

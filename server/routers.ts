@@ -345,6 +345,7 @@ Keep responses concise, helpful, and on-brand. Use the BUILD LEVEL tone: direct,
         fileUrl: z.string().optional(),
         fileName: z.string().optional(),
         badge: z.string().optional(),
+        stripePaymentLink: z.string().optional(),
         published: z.boolean().default(false),
       }))
       .mutation(async ({ input }) => {
@@ -365,6 +366,7 @@ Keep responses concise, helpful, and on-brand. Use the BUILD LEVEL tone: direct,
         fileUrl: z.string().optional(),
         fileName: z.string().optional(),
         badge: z.string().optional(),
+        stripePaymentLink: z.string().optional(),
         published: z.boolean().optional(),
       }))
       .mutation(async ({ input }) => {

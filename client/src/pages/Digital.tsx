@@ -2,15 +2,6 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Loader2 } from "lucide-react";
 
-// Stripe Payment Links for each product (keyed by product name — update when adding new products)
-const PAYMENT_LINKS: Record<string, string> = {
-  "DISCIPLINE MINDSET": "https://buy.stripe.com/test_3cI5kD3gc5iOfz18lY6wE00",
-  "EXECUTION OVER EMOTION": "https://buy.stripe.com/test_9B68wPbMIcLg2Mf59M6wE01",
-};
-
-// Fallback for products without a payment link — use Stripe checkout via backend
-const DEFAULT_PAYMENT_LINK = "https://buy.stripe.com/test_3cI5kD3gc5iOfz18lY6wE00";
-
 type Product = {
   id: number;
   name: string;
@@ -21,6 +12,7 @@ type Product = {
   fileUrl: string | null;
   fileName: string | null;
   badge: string | null;
+  stripePaymentLink?: string | null;
   published: boolean | null;
   sortOrder: number | null;
   createdAt: Date | null;
@@ -29,17 +21,21 @@ type Product = {
 function ProductCard({ product }: { product: Product }) {
   const [expanded, setExpanded] = useState(false);
 
-  const paymentLink =
-    PAYMENT_LINKS[product.name.toUpperCase()] ||
-    PAYMENT_LINKS[product.name] ||
-    DEFAULT_PAYMENT_LINK;
-
   const categoryLabel =
     product.category === "audiobook"
       ? "AUDIOBOOK"
       : product.category === "video"
       ? "VIDEO COURSE"
       : "PDF GUIDE";
+
+  const handleBuyNow = () => {
+    const link = product.stripePaymentLink;
+    if (link) {
+      window.open(link, "_blank");
+    } else {
+      alert("Checkout link not available yet. Please check back soon.");
+    }
+  };
 
   return (
     <div className="bg-zinc-900 border border-zinc-800 overflow-hidden group hover:border-orange-500/50 transition-all duration-300">
@@ -111,21 +107,19 @@ function ProductCard({ product }: { product: Product }) {
 
         <div className="border-t border-zinc-800 my-4" />
 
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-3">
           <div>
             <span className="text-white font-black text-2xl">
               ${product.price.toFixed(2)}
             </span>
             <span className="text-zinc-600 text-xs ml-2">USD</span>
           </div>
-          <a
-            href={paymentLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="bg-orange-500 hover:bg-orange-400 text-black font-black text-sm px-6 py-3 tracking-widest uppercase transition-colors duration-200 inline-block"
+          <button
+            onClick={handleBuyNow}
+            className="bg-orange-500 hover:bg-orange-400 text-black font-black text-sm px-6 py-3 tracking-widest uppercase transition-colors duration-200"
           >
             BUY NOW →
-          </a>
+          </button>
         </div>
 
         <div className="flex gap-3 mt-3 flex-wrap">

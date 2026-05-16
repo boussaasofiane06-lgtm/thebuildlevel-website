@@ -8,6 +8,13 @@
       "when": 1778889337610,
       "tag": "0000_simple_bloodstrike",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1778935469427,
+      "tag": "0001_deep_quasar",
+      "breakpoints": true
     }
   ]
 }
