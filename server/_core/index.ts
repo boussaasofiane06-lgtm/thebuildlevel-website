@@ -101,6 +101,19 @@ async function startServer() {
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
+
+    // Keep-alive: ping self every 10 minutes to prevent Render free tier from sleeping
+    if (process.env.NODE_ENV !== "development") {
+      const selfUrl = process.env.RENDER_EXTERNAL_URL || `http://localhost:${port}`;
+      setInterval(async () => {
+        try {
+          await fetch(`${selfUrl}/`);
+          console.log(`[keep-alive] Pinged ${selfUrl}`);
+        } catch (e) {
+          console.log(`[keep-alive] Ping failed: ${e}`);
+        }
+      }, 10 * 60 * 1000); // every 10 minutes
+    }
   });
 }
 
