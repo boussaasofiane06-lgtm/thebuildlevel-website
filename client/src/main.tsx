@@ -50,8 +50,13 @@ const trpcClient = trpc.createClient({
       transformer: superjson,
       headers() {
         const token = sessionStorage.getItem(ADMIN_TOKEN_KEY);
-        // Send as Authorization Bearer — backend adminProcedure accepts this
-        return token ? { "Authorization": `Bearer ${token}` } : {};
+        if (!token) return {};
+        // If it looks like a JWT (starts with eyJ), send as Authorization Bearer
+        // Otherwise it's the raw password — send as x-admin-token
+        if (token.startsWith("eyJ")) {
+          return { "Authorization": `Bearer ${token}` };
+        }
+        return { "x-admin-token": token };
       },
       fetch(input, init) {
         return globalThis.fetch(input, {
