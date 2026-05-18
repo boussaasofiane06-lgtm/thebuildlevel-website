@@ -500,7 +500,7 @@ router.post("/videos", requireAdmin, async (req: Request, res: Response) => {
       published: z.boolean().optional(),
       sortOrder: z.number().optional(),
     }).parse(req.body);
-    const [row] = await db.insert(aiVideos).values({ ...data, updatedAt: new Date() }).$returningId();
+    const [row] = await db.insert(aiVideos).values({ title: data.title, videoUrl: data.videoUrl, description: data.description, thumbnailUrl: data.thumbnailUrl, category: data.category, duration: data.duration, published: data.published ?? false, sortOrder: data.sortOrder ?? 0 }).$returningId();
     const [created] = await db.select().from(aiVideos).where(eq(aiVideos.id, row.id));
     res.json(created);
   } catch (e: any) { res.status(400).json({ error: e.message }); }
@@ -510,7 +510,17 @@ router.put("/videos/:id", requireAdmin, async (req: Request, res: Response) => {
   try {
     const db = await getDb();
     const id = Number(req.params.id);
-    await db.update(aiVideos).set({ ...req.body, updatedAt: new Date() }).where(eq(aiVideos.id, id));
+    const { title, videoUrl, description, thumbnailUrl, category, duration, published, sortOrder } = req.body;
+    const updateData: Record<string, unknown> = {};
+    if (title !== undefined) updateData.title = title;
+    if (videoUrl !== undefined) updateData.videoUrl = videoUrl;
+    if (description !== undefined) updateData.description = description;
+    if (thumbnailUrl !== undefined) updateData.thumbnailUrl = thumbnailUrl;
+    if (category !== undefined) updateData.category = category;
+    if (duration !== undefined) updateData.duration = duration;
+    if (published !== undefined) updateData.published = published;
+    if (sortOrder !== undefined) updateData.sortOrder = sortOrder;
+    await db.update(aiVideos).set(updateData).where(eq(aiVideos.id, id));
     const [row] = await db.select().from(aiVideos).where(eq(aiVideos.id, id));
     res.json(row);
   } catch (e: any) { res.status(400).json({ error: e.message }); }
