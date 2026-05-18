@@ -2,13 +2,12 @@ services:
   - type: web
     name: build-level-backend
     runtime: node
-    buildCommand: pnpm install && pnpm build
+    rootDir: buildlevel-backend
+    buildCommand: npm install && npm run build
     startCommand: node dist/index.js
     envVars:
       - key: NODE_ENV
         value: production
-      - key: API_ONLY
-        value: "true"
       - key: ADMIN_PASSWORD_HASH
         sync: false
       - key: DATABASE_URL
@@ -20,8 +19,4 @@ services:
       - key: STRIPE_WEBHOOK_SECRET
         sync: false
       - key: VITE_STRIPE_PUBLISHABLE_KEY
-        sync: false
-      - key: PAYPAL_CLIENT_ID
-        sync: false
-      - key: PAYPAL_CLIENT_SECRET
         sync: false
