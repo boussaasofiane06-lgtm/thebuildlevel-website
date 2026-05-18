@@ -4,9 +4,17 @@
    Only accessible to admin users (role = 'admin')
    ========================================================================== */
 
-import { useState, useRef } from "react";
-import { useAuth } from "@/_core/hooks/useAuth";
-import { trpc } from "@/lib/trpc";
+import { useState, useRef, useEffect, useCallback } from "react";
+import {
+  listProducts, createProduct, updateProduct, deleteProduct,
+  listBlogPosts, createBlogPost, updateBlogPost, deleteBlogPost,
+  listDigitalProducts, createDigitalProduct, updateDigitalProduct, deleteDigitalProduct,
+  listVideos, createVideo, updateVideo, deleteVideo,
+  listAffiliateProducts, createAffiliateProduct, updateAffiliateProduct, deleteAffiliateProduct,
+  listMembershipTiers, createMembershipTier, updateMembershipTier, deleteMembershipTier,
+  getSettings, saveSettings,
+  type Product, type BlogPost, type DigitalProduct, type AIVideo, type AffiliateProduct, type MembershipTier,
+} from "@/lib/adminApi";
 import { toast } from "sonner";
 import { Link } from "wouter";
 import {
@@ -179,14 +187,6 @@ function ProductModal({
 }) {
   const [form, setForm] = useState(initial);
   const fileRef = useRef<HTMLInputElement>(null);
-  const uploadImage = trpc.admin.uploadProductImage.useMutation({
-    onSuccess: (data) => {
-      setForm((f) => ({ ...f, imageUrl: data.url }));
-      toast.success("Image uploaded");
-    },
-    onError: () => toast.error("Image upload failed"),
-  });
-
   const set = (k: keyof ProductFormData, v: string | boolean) =>
     setForm((f) => ({ ...f, [k]: v }));
 
@@ -387,26 +387,38 @@ function ProductModal({
 // ─── Settings Tab ─────────────────────────────────────────────────────────────
 
 function SettingsTab() {
-  const { data: settings, refetch } = trpc.admin.getSettings.useQuery();
-  const [form, setForm] = useState<Record<string, string>>({});
-  const [initialized, setInitialized] = useState(false);
-  const bulkSave = trpc.admin.bulkSetSettings.useMutation({
-    onSuccess: () => { toast.success("Settings saved"); refetch(); },
-    onError: () => toast.error("Failed to save settings"),
+  const [form, setForm] = useState<Record<string, string>>({
+    contact_email: "", instagram: "", tiktok: "", twitter: "",
+    announcement_text: "NEW DROP LIVE — FREE SHIPPING OVER $100",
+    announcement_link: "/shop", free_shipping_threshold: "100",
   });
+  const [saving, setSaving] = useState(false);
 
-  if (settings && !initialized) {
-    setForm({
-      contact_email: settings.contact_email || "",
-      instagram: settings.instagram || "",
-      tiktok: settings.tiktok || "",
-      twitter: settings.twitter || "",
-      announcement_text: settings.announcement_text || "NEW DROP LIVE — FREE SHIPPING OVER $100",
-      announcement_link: settings.announcement_link || "/shop",
-      free_shipping_threshold: settings.free_shipping_threshold || "100",
-    });
-    setInitialized(true);
-  }
+  useEffect(() => {
+    getSettings().then(data => {
+      setForm({
+        contact_email: data.contact_email || "",
+        instagram: data.instagram || "",
+        tiktok: data.tiktok || "",
+        twitter: data.twitter || "",
+        announcement_text: data.announcement_text || "NEW DROP LIVE — FREE SHIPPING OVER $100",
+        announcement_link: data.announcement_link || "/shop",
+        free_shipping_threshold: data.free_shipping_threshold || "100",
+      });
+    }).catch(() => {});
+  }, []);
+
+  const handleSaveSettings = async () => {
+    setSaving(true);
+    try {
+      await saveSettings(form);
+      toast.success("Settings saved");
+    } catch {
+      toast.error("Failed to save settings");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -480,12 +492,12 @@ function SettingsTab() {
 
       <div className="flex justify-end">
         <button
-          onClick={() => bulkSave.mutate(form)}
-          disabled={bulkSave.isPending}
+          onClick={handleSaveSettings}
+          disabled={saving}
           className="admin-btn-primary flex items-center gap-2"
         >
-          {bulkSave.isPending ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-          {bulkSave.isPending ? "Saving..." : "Save All Settings"}
+          {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+          {saving ? "Saving..." : "Save All Settings"}
         </button>
       </div>
     </div>
@@ -719,21 +731,33 @@ function BlogTab() {
 
   const EMPTY_POST = { title: "", slug: "", excerpt: "", content: "", imageUrl: "", category: "mindset", published: false };
 
-  const { data: posts = [], refetch } = trpc.blog.adminList.useQuery();
-  const createPost = trpc.blog.adminCreate.useMutation({ onSuccess: () => { toast.success("Post created!"); setShowForm(false); refetch(); } });
-  const updatePost = trpc.blog.adminUpdate.useMutation({ onSuccess: () => { toast.success("Post updated!"); setEditPost(null); refetch(); } });
-  const deletePost = trpc.blog.adminDelete.useMutation({ onSuccess: () => { toast.success("Post deleted"); refetch(); } });
+  const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [blogSaving, setBlogSaving] = useState(false);
+  const [blogDeleting, setBlogDeleting] = useState<number | null>(null);
+
+  const loadPosts = useCallback(async () => {
+    try { setPosts(await listBlogPosts()); } catch { toast.error("Failed to load posts"); }
+  }, []);
+
+  useEffect(() => { loadPosts(); }, [loadPosts]);
 
   const form = editPost || (showForm ? EMPTY_POST : null);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form) return;
     if (!form.title || !form.slug || !form.content) { toast.error("Title, slug, and content are required"); return; }
-    if (editPost?.id) {
-      updatePost.mutate({ id: editPost.id, title: form.title, slug: form.slug, excerpt: form.excerpt || undefined, content: form.content, imageUrl: form.imageUrl || undefined, category: form.category, published: form.published });
-    } else {
-      createPost.mutate({ title: form.title, slug: form.slug, excerpt: form.excerpt || undefined, content: form.content, imageUrl: form.imageUrl || undefined, category: form.category, published: form.published });
-    }
+    setBlogSaving(true);
+    try {
+      if (editPost?.id) {
+        await updateBlogPost(editPost.id, { title: form.title, slug: form.slug, excerpt: form.excerpt || undefined, content: form.content, imageUrl: form.imageUrl || undefined, published: form.published });
+        toast.success("Post updated!"); setEditPost(null);
+      } else {
+        await createBlogPost({ title: form.title, slug: form.slug, excerpt: form.excerpt || undefined, content: form.content, imageUrl: form.imageUrl || undefined, published: form.published, featured: false });
+        toast.success("Post created!"); setShowForm(false);
+      }
+      await loadPosts();
+    } catch { toast.error("Failed to save post"); }
+    finally { setBlogSaving(false); }
   };
 
   return (
@@ -788,8 +812,8 @@ function BlogTab() {
             </label>
             <div className="flex gap-2">
               <button onClick={() => { setShowForm(false); setEditPost(null); }} className="admin-btn-secondary">CANCEL</button>
-              <button onClick={handleSave} disabled={createPost.isPending || updatePost.isPending} className="admin-btn-primary flex items-center gap-2">
-                <Save size={12} /> {editPost?.id ? "UPDATE" : "CREATE"}
+              <button onClick={handleSave} disabled={blogSaving} className="admin-btn-primary flex items-center gap-2">
+                {blogSaving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} {editPost?.id ? "UPDATE" : "CREATE"}
               </button>
             </div>
           </div>
@@ -821,7 +845,7 @@ function BlogTab() {
                 <button onClick={() => { setEditPost({ id: post.id, title: post.title, slug: post.slug, excerpt: post.excerpt || "", content: post.content, imageUrl: post.imageUrl || "", category: post.category || "mindset", published: post.published ?? false }); setShowForm(false); }} className="p-1.5 text-[#555] hover:text-white transition-colors">
                   <Pencil size={14} />
                 </button>
-                <button onClick={() => { if (window.confirm(`Delete "${post.title}"?`)) deletePost.mutate({ id: post.id }); }} className="p-1.5 text-[#555] hover:text-red-400 transition-colors">
+                <button onClick={async () => { if (window.confirm(`Delete "${post.title}"?`)) { setBlogDeleting(post.id); try { await deleteBlogPost(post.id); toast.success("Post deleted"); await loadPosts(); } catch { toast.error("Delete failed"); } finally { setBlogDeleting(null); } } }} disabled={blogDeleting === post.id} className="p-1.5 text-[#555] hover:text-red-400 transition-colors disabled:opacity-50">
                   <Trash2 size={14} />
                 </button>
               </div>
@@ -848,10 +872,15 @@ function DigitalTab() {
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState<FormData>(EMPTY_FORM);
 
-  const { data: items = [], refetch } = trpc.digital.adminList.useQuery();
-  const createItem = trpc.digital.adminCreate.useMutation({ onSuccess: () => { toast.success("Product created!"); setShowForm(false); setFormData(EMPTY_FORM); refetch(); } });
-  const updateItem = trpc.digital.adminUpdate.useMutation({ onSuccess: () => { toast.success("Product updated!"); setShowForm(false); setFormData(EMPTY_FORM); refetch(); } });
-  const deleteItem = trpc.digital.adminDelete.useMutation({ onSuccess: () => { toast.success("Product deleted"); refetch(); } });
+  const [items, setItems] = useState<DigitalProduct[]>([]);
+  const [digitalSaving, setDigitalSaving] = useState(false);
+  const [digitalDeleting, setDigitalDeleting] = useState<number | null>(null);
+
+  const loadItems = useCallback(async () => {
+    try { setItems(await listDigitalProducts()); } catch { toast.error("Failed to load digital products"); }
+  }, []);
+
+  useEffect(() => { loadItems(); }, [loadItems]);
 
   const setField = (field: keyof FormData, value: string | boolean) =>
     setFormData(p => ({ ...p, [field]: value }));
@@ -883,16 +912,23 @@ function DigitalTab() {
     reader.readAsDataURL(file);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.name || !formData.price) { toast.error("Name and price are required"); return; }
     const price = parseFloat(formData.price);
     if (isNaN(price) || price < 0) { toast.error("Invalid price"); return; }
-    const payload = { name: formData.name, description: formData.description || undefined, price, category: formData.category, imageUrl: formData.imageUrl || undefined, fileUrl: formData.fileUrl || undefined, fileName: formData.fileName || undefined, badge: formData.badge || undefined, stripePaymentLink: formData.stripePaymentLink || undefined, published: formData.published };
-    if (formData.id) {
-      updateItem.mutate({ id: formData.id, ...payload });
-    } else {
-      createItem.mutate(payload);
-    }
+    const payload = { name: formData.name, description: formData.description || undefined, price: String(price), category: formData.category, imageUrl: formData.imageUrl || undefined, fileUrl: formData.fileUrl || undefined, fileName: formData.fileName || undefined, badge: formData.badge || undefined, stripePaymentLink: formData.stripePaymentLink || undefined, published: formData.published };
+    setDigitalSaving(true);
+    try {
+      if (formData.id) {
+        await updateDigitalProduct(formData.id, payload);
+        toast.success("Product updated!");
+      } else {
+        await createDigitalProduct(payload);
+        toast.success("Product created!");
+      }
+      setShowForm(false); setFormData(EMPTY_FORM); await loadItems();
+    } catch { toast.error("Failed to save product"); }
+    finally { setDigitalSaving(false); }
   };
 
   return (
@@ -993,8 +1029,8 @@ function DigitalTab() {
             </label>
             <div className="flex gap-2">
               <button onClick={closeForm} className="admin-btn-secondary">CANCEL</button>
-              <button onClick={handleSave} disabled={createItem.isPending || updateItem.isPending} className="admin-btn-primary flex items-center gap-2">
-                <Save size={12} /> {formData.id ? "UPDATE" : "CREATE"}
+              <button onClick={handleSave} disabled={digitalSaving} className="admin-btn-primary flex items-center gap-2">
+                {digitalSaving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} {formData.id ? "UPDATE" : "CREATE"}
               </button>
             </div>
           </div>
@@ -1026,7 +1062,7 @@ function DigitalTab() {
                 <button onClick={() => openEdit(item)} className="p-1.5 text-[#555] hover:text-white transition-colors">
                   <Pencil size={14} />
                 </button>
-                <button onClick={() => { if (window.confirm(`Delete "${item.name}"?`)) deleteItem.mutate({ id: item.id }); }} className="p-1.5 text-[#555] hover:text-red-400 transition-colors">
+                <button onClick={async () => { if (window.confirm(`Delete "${item.name}"?`)) { setDigitalDeleting(item.id); try { await deleteDigitalProduct(item.id); toast.success("Product deleted"); await loadItems(); } catch { toast.error("Delete failed"); } finally { setDigitalDeleting(null); } } }} disabled={digitalDeleting === item.id} className="p-1.5 text-[#555] hover:text-red-400 transition-colors disabled:opacity-50">
                   <Trash2 size={14} />
                 </button>
               </div>
@@ -1041,20 +1077,29 @@ function DigitalTab() {
 // ─── AI Videos Tab ──────────────────────────────────────────────────────────
 
 function AIVideosTab() {
-  const { data: videos = [], refetch } = trpc.aiVideos.adminList.useQuery();
-  const createVideo = trpc.aiVideos.adminCreate.useMutation({ onSuccess: () => { toast.success("Video added!"); refetch(); setShowForm(false); setForm(EMPTY_VIDEO); } });
-  const updateVideo = trpc.aiVideos.adminUpdate.useMutation({ onSuccess: () => { toast.success("Video updated!"); refetch(); setShowForm(false); setEditItem(null); } });
-  const deleteVideo = trpc.aiVideos.adminDelete.useMutation({ onSuccess: () => { toast.success("Deleted"); refetch(); } });
-
   const EMPTY_VIDEO = { title: "", description: "", videoUrl: "", thumbnailUrl: "", category: "motivation", duration: "", badge: "", published: false, sortOrder: 0 };
+  const [videos, setVideos] = useState<AIVideo[]>([]);
+  const [videoSaving, setVideoSaving] = useState(false);
+  const [videoDeleting, setVideoDeleting] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editItem, setEditItem] = useState<any>(null);
   const [form, setForm] = useState(EMPTY_VIDEO);
 
-  const handleSave = () => {
+  const loadVideos = useCallback(async () => {
+    try { setVideos(await listVideos()); } catch { toast.error("Failed to load videos"); }
+  }, []);
+
+  useEffect(() => { loadVideos(); }, [loadVideos]);
+
+  const handleSave = async () => {
     if (!form.title.trim()) { toast.error("Title required"); return; }
-    if (editItem) { updateVideo.mutate({ ...form, id: editItem.id }); }
-    else { createVideo.mutate(form); }
+    setVideoSaving(true);
+    try {
+      if (editItem) { await updateVideo(editItem.id, form); toast.success("Video updated!"); setEditItem(null); }
+      else { await createVideo(form); toast.success("Video added!"); }
+      setShowForm(false); setForm(EMPTY_VIDEO); await loadVideos();
+    } catch { toast.error("Failed to save video"); }
+    finally { setVideoSaving(false); }
   };
 
   return (
@@ -1087,7 +1132,7 @@ function AIVideosTab() {
             </div>
           </div>
           <div className="flex gap-3 mt-4">
-            <button onClick={handleSave} disabled={createVideo.isPending || updateVideo.isPending} className="admin-btn-primary flex items-center gap-2"><Save size={14} /> SAVE</button>
+            <button onClick={handleSave} disabled={videoSaving} className="admin-btn-primary flex items-center gap-2">{videoSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} SAVE</button>
             <button onClick={() => { setShowForm(false); setEditItem(null); }} className="admin-btn-secondary">CANCEL</button>
           </div>
         </div>
@@ -1114,7 +1159,7 @@ function AIVideosTab() {
             <div className="flex items-center gap-3">
               <span className={`font-display text-xs tracking-widest px-2 py-0.5 ${v.published ? "bg-green-900/30 text-green-400" : "bg-[#222] text-[#555]"}`}>{v.published ? "LIVE" : "DRAFT"}</span>
               <button onClick={() => { setEditItem(v); setForm({ title: v.title, description: v.description || "", videoUrl: v.videoUrl || "", thumbnailUrl: v.thumbnailUrl || "", category: v.category, duration: v.duration || "", badge: v.badge || "", published: v.published, sortOrder: v.sortOrder }); setShowForm(true); }} className="p-1.5 text-[#555] hover:text-white transition-colors"><Pencil size={14} /></button>
-              <button onClick={() => { if (window.confirm(`Delete "${v.title}"?`)) deleteVideo.mutate({ id: v.id }); }} className="p-1.5 text-[#555] hover:text-red-400 transition-colors"><Trash2 size={14} /></button>
+              <button onClick={async () => { if (window.confirm(`Delete "${v.title}"?`)) { setVideoDeleting(v.id); try { await deleteVideo(v.id); toast.success("Deleted"); await loadVideos(); } catch { toast.error("Delete failed"); } finally { setVideoDeleting(null); } } }} disabled={videoDeleting === v.id} className="p-1.5 text-[#555] hover:text-red-400 transition-colors disabled:opacity-50"><Trash2 size={14} /></button>
             </div>
           </div>
         ))}
@@ -1126,22 +1171,31 @@ function AIVideosTab() {
 // ─── Affiliate Tab ────────────────────────────────────────────────────────────
 
 function AffiliateTab() {
-  const { data: items = [], refetch } = trpc.affiliate.adminList.useQuery();
-  const createItem = trpc.affiliate.adminCreate.useMutation({ onSuccess: () => { toast.success("Product added!"); refetch(); setShowForm(false); setForm(EMPTY); } });
-  const updateItem = trpc.affiliate.adminUpdate.useMutation({ onSuccess: () => { toast.success("Updated!"); refetch(); setShowForm(false); setEditItem(null); } });
-  const deleteItem = trpc.affiliate.adminDelete.useMutation({ onSuccess: () => { toast.success("Deleted"); refetch(); } });
-
   const EMPTY = { name: "", description: "", price: "", affiliateUrl: "", imageUrl: "", category: "gear", brand: "", badge: "", commission: "", published: false, sortOrder: 0 };
+  const [items, setItems] = useState<AffiliateProduct[]>([]);
+  const [affiliateSaving, setAffiliateSaving] = useState(false);
+  const [affiliateDeleting, setAffiliateDeleting] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editItem, setEditItem] = useState<any>(null);
   const [form, setForm] = useState(EMPTY);
 
-  const handleSave = () => {
+  const loadItems = useCallback(async () => {
+    try { setItems(await listAffiliateProducts()); } catch { toast.error("Failed to load affiliate products"); }
+  }, []);
+
+  useEffect(() => { loadItems(); }, [loadItems]);
+
+  const handleSave = async () => {
     if (!form.name.trim()) { toast.error("Name required"); return; }
     if (!form.affiliateUrl.trim()) { toast.error("Affiliate URL required"); return; }
-    const payload = { ...form, price: form.price ? parseFloat(form.price) : undefined };
-    if (editItem) { updateItem.mutate({ ...payload, id: editItem.id }); }
-    else { createItem.mutate(payload); }
+    const payload = { ...form, price: form.price ? form.price : undefined };
+    setAffiliateSaving(true);
+    try {
+      if (editItem) { await updateAffiliateProduct(editItem.id, payload); toast.success("Updated!"); setEditItem(null); }
+      else { await createAffiliateProduct(payload); toast.success("Product added!"); }
+      setShowForm(false); setForm(EMPTY); await loadItems();
+    } catch { toast.error("Failed to save"); }
+    finally { setAffiliateSaving(false); }
   };
 
   return (
@@ -1176,7 +1230,7 @@ function AffiliateTab() {
             </div>
           </div>
           <div className="flex gap-3 mt-4">
-            <button onClick={handleSave} disabled={createItem.isPending || updateItem.isPending} className="admin-btn-primary flex items-center gap-2"><Save size={14} /> SAVE</button>
+            <button onClick={handleSave} disabled={affiliateSaving} className="admin-btn-primary flex items-center gap-2">{affiliateSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} SAVE</button>
             <button onClick={() => { setShowForm(false); setEditItem(null); }} className="admin-btn-secondary">CANCEL</button>
           </div>
         </div>
@@ -1203,7 +1257,7 @@ function AffiliateTab() {
             <div className="flex items-center gap-3">
               <span className={`font-display text-xs tracking-widest px-2 py-0.5 ${item.published ? "bg-green-900/30 text-green-400" : "bg-[#222] text-[#555]"}`}>{item.published ? "LIVE" : "DRAFT"}</span>
               <button onClick={() => { setEditItem(item); setForm({ name: item.name, description: item.description || "", price: item.price ? String(item.price) : "", affiliateUrl: item.affiliateUrl, imageUrl: item.imageUrl || "", category: item.category, brand: item.brand || "", badge: item.badge || "", commission: item.commission || "", published: item.published, sortOrder: item.sortOrder }); setShowForm(true); }} className="p-1.5 text-[#555] hover:text-white transition-colors"><Pencil size={14} /></button>
-              <button onClick={() => { if (window.confirm(`Delete "${item.name}"?`)) deleteItem.mutate({ id: item.id }); }} className="p-1.5 text-[#555] hover:text-red-400 transition-colors"><Trash2 size={14} /></button>
+              <button onClick={async () => { if (window.confirm(`Delete "${item.name}"?`)) { setAffiliateDeleting(item.id); try { await deleteAffiliateProduct(item.id); toast.success("Deleted"); await loadItems(); } catch { toast.error("Delete failed"); } finally { setAffiliateDeleting(null); } } }} disabled={affiliateDeleting === item.id} className="p-1.5 text-[#555] hover:text-red-400 transition-colors disabled:opacity-50"><Trash2 size={14} /></button>
             </div>
           </div>
         ))}
@@ -1215,23 +1269,32 @@ function AffiliateTab() {
 // ─── Membership Tab ───────────────────────────────────────────────────────────
 
 function MembershipTab() {
-  const { data: tiers = [], refetch } = trpc.membership.adminList.useQuery();
-  const createTier = trpc.membership.adminCreate.useMutation({ onSuccess: () => { toast.success("Tier added!"); refetch(); setShowForm(false); setForm(EMPTY); } });
-  const updateTier = trpc.membership.adminUpdate.useMutation({ onSuccess: () => { toast.success("Updated!"); refetch(); setShowForm(false); setEditItem(null); } });
-  const deleteTier = trpc.membership.adminDelete.useMutation({ onSuccess: () => { toast.success("Deleted"); refetch(); } });
-
-  const EMPTY = { name: "", description: "", price: "", interval: "monthly" as "monthly" | "yearly", features: "", badge: "", stripePriceId: "", published: false, sortOrder: 0 };
+  const EMPTY = { name: "", description: "", price: "", interval: "monthly" as "monthly" | "yearly", features: "", badge: "", stripePaymentLink: "", published: false, sortOrder: 0 };
+  const [tiers, setTiers] = useState<MembershipTier[]>([]);
+  const [memberSaving, setMemberSaving] = useState(false);
+  const [memberDeleting, setMemberDeleting] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editItem, setEditItem] = useState<any>(null);
   const [form, setForm] = useState(EMPTY);
 
-  const handleSave = () => {
+  const loadTiers = useCallback(async () => {
+    try { setTiers(await listMembershipTiers()); } catch { toast.error("Failed to load tiers"); }
+  }, []);
+
+  useEffect(() => { loadTiers(); }, [loadTiers]);
+
+  const handleSave = async () => {
     if (!form.name.trim()) { toast.error("Name required"); return; }
     if (!form.price) { toast.error("Price required"); return; }
     const featuresArr = form.features.split("\n").map((f: string) => f.trim()).filter(Boolean);
-    const payload = { ...form, price: parseFloat(form.price), features: featuresArr };
-    if (editItem) { updateTier.mutate({ ...payload, id: editItem.id }); }
-    else { createTier.mutate(payload); }
+    const payload = { ...form, price: form.price, features: featuresArr };
+    setMemberSaving(true);
+    try {
+      if (editItem) { await updateMembershipTier(editItem.id, payload); toast.success("Updated!"); setEditItem(null); }
+      else { await createMembershipTier(payload); toast.success("Tier added!"); }
+      setShowForm(false); setForm(EMPTY); await loadTiers();
+    } catch { toast.error("Failed to save"); }
+    finally { setMemberSaving(false); }
   };
 
   return (
@@ -1254,7 +1317,7 @@ function MembershipTab() {
             <div><label className="admin-label">BADGE</label><input className="admin-input" value={form.badge} onChange={e => setForm(f => ({...f, badge: e.target.value}))} placeholder="e.g. MOST POPULAR" /></div>
             <div><label className="admin-label">PRICE (USD) *</label><input className="admin-input" type="number" value={form.price} onChange={e => setForm(f => ({...f, price: e.target.value}))} placeholder="9.99" /></div>
             <div><label className="admin-label">BILLING INTERVAL</label><select className="admin-input" value={form.interval} onChange={e => setForm(f => ({...f, interval: e.target.value as "monthly" | "yearly"}))}><option value="monthly">Monthly</option><option value="yearly">Yearly</option></select></div>
-            <div><label className="admin-label">STRIPE PRICE ID</label><input className="admin-input" value={form.stripePriceId} onChange={e => setForm(f => ({...f, stripePriceId: e.target.value}))} placeholder="price_... (from Stripe dashboard)" /></div>
+            <div><label className="admin-label">STRIPE PAYMENT LINK</label><input className="admin-input" value={form.stripePaymentLink} onChange={e => setForm(f => ({...f, stripePaymentLink: e.target.value}))} placeholder="https://buy.stripe.com/... (Stripe Payment Link)" /></div>
             <div className="flex items-center gap-3 pt-6">
               <label className="admin-label">PUBLISHED</label>
               <button onClick={() => setForm(f => ({...f, published: !f.published}))} className="text-[#FF6B00]">{form.published ? <ToggleRight size={24} /> : <ToggleLeft size={24} />}</button>
@@ -1264,7 +1327,7 @@ function MembershipTab() {
             <div className="md:col-span-2"><label className="admin-label">FEATURES (one per line)</label><textarea className="admin-input" rows={4} value={form.features} onChange={e => setForm(f => ({...f, features: e.target.value}))} placeholder="Access to private community\nWeekly workout plans\nMonthly Q&A calls" /></div>
           </div>
           <div className="flex gap-3 mt-4">
-            <button onClick={handleSave} disabled={createTier.isPending || updateTier.isPending} className="admin-btn-primary flex items-center gap-2"><Save size={14} /> SAVE</button>
+            <button onClick={handleSave} disabled={memberSaving} className="admin-btn-primary flex items-center gap-2">{memberSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} SAVE</button>
             <button onClick={() => { setShowForm(false); setEditItem(null); }} className="admin-btn-secondary">CANCEL</button>
           </div>
         </div>
@@ -1287,8 +1350,8 @@ function MembershipTab() {
             </div>
             <div className="flex items-center gap-3">
               <span className={`font-display text-xs tracking-widest px-2 py-0.5 ${tier.published ? "bg-green-900/30 text-green-400" : "bg-[#222] text-[#555]"}`}>{tier.published ? "LIVE" : "DRAFT"}</span>
-              <button onClick={() => { setEditItem(tier); setForm({ name: tier.name, description: tier.description || "", price: String(tier.price), interval: tier.interval, features: Array.isArray(tier.features) ? tier.features.join("\n") : "", badge: tier.badge || "", stripePriceId: tier.stripePriceId || "", published: tier.published, sortOrder: tier.sortOrder }); setShowForm(true); }} className="p-1.5 text-[#555] hover:text-white transition-colors"><Pencil size={14} /></button>
-              <button onClick={() => { if (window.confirm(`Delete "${tier.name}"?`)) deleteTier.mutate({ id: tier.id }); }} className="p-1.5 text-[#555] hover:text-red-400 transition-colors"><Trash2 size={14} /></button>
+              <button onClick={() => { setEditItem(tier); setForm({ name: tier.name, description: tier.description || "", price: String(tier.price), interval: tier.interval as "monthly" | "yearly", features: Array.isArray(tier.features) ? tier.features.join("\n") : "", badge: tier.badge || "", stripePaymentLink: tier.stripePaymentLink || "", published: tier.published, sortOrder: tier.sortOrder }); setShowForm(true); }} className="p-1.5 text-[#555] hover:text-white transition-colors"><Pencil size={14} /></button>
+              <button onClick={async () => { if (window.confirm(`Delete "${tier.name}"?`)) { setMemberDeleting(tier.id); try { await deleteMembershipTier(tier.id); toast.success("Deleted"); await loadTiers(); } catch { toast.error("Delete failed"); } finally { setMemberDeleting(null); } } }} disabled={memberDeleting === tier.id} className="p-1.5 text-[#555] hover:text-red-400 transition-colors disabled:opacity-50"><Trash2 size={14} /></button>
             </div>
           </div>
         ))}
@@ -1304,29 +1367,22 @@ export default function Admin() {
   const [showModal, setShowModal] = useState(false);
   const [editProduct, setEditProduct] = useState<(ProductFormData & { id?: number }) | null>(null);
 
-  const { data: productList = [], refetch } = trpc.admin.listProducts.useQuery();
+  const [productList, setProductList] = useState<Product[]>([]);
+  const [productSaving, setProductSaving] = useState(false);
+  const [productDeleting, setProductDeleting] = useState<number | null>(null);
 
-  const createProduct = trpc.admin.createProduct.useMutation({
-    onSuccess: () => { toast.success("Product created!"); setShowModal(false); refetch(); },
-    onError: () => toast.error("Failed to create product"),
-  });
+  const loadProducts = useCallback(async () => {
+    try { setProductList(await listProducts()); } catch { toast.error("Failed to load products"); }
+  }, []);
 
-  const updateProduct = trpc.admin.updateProduct.useMutation({
-    onSuccess: () => { toast.success("Product updated!"); setEditProduct(null); refetch(); },
-    onError: () => toast.error("Failed to update product"),
-  });
+  useEffect(() => { loadProducts(); }, [loadProducts]);
 
-  const deleteProduct = trpc.admin.deleteProduct.useMutation({
-    onSuccess: () => { toast.success("Product deleted"); refetch(); },
-    onError: () => toast.error("Failed to delete product"),
-  });
-
-  const handleSave = (form: ProductFormData & { id?: number }) => {
+  const handleSave = async (form: ProductFormData & { id?: number }) => {
     const data = {
       name: form.name,
       description: form.description || undefined,
-      price: parseFloat(form.price),
-      compareAtPrice: form.compareAtPrice ? parseFloat(form.compareAtPrice) : undefined,
+      price: String(parseFloat(form.price)),
+      compareAtPrice: form.compareAtPrice ? String(parseFloat(form.compareAtPrice)) : undefined,
       category: form.category,
       sizes: form.sizes.split(",").map((s) => s.trim()).filter(Boolean),
       imageUrl: form.imageUrl || undefined,
@@ -1341,12 +1397,18 @@ export default function Admin() {
       shopifyProductId: form.shopifyProductId || undefined,
       printifyProductId: form.printifyProductId || undefined,
     };
-
-    if (form.id) {
-      updateProduct.mutate({ id: form.id, data });
-    } else {
-      createProduct.mutate(data);
-    }
+    setProductSaving(true);
+    try {
+      if (form.id) {
+        await updateProduct(form.id, data);
+        toast.success("Product updated!"); setEditProduct(null);
+      } else {
+        await createProduct(data);
+        toast.success("Product created!"); setShowModal(false);
+      }
+      await loadProducts();
+    } catch { toast.error("Failed to save product"); }
+    finally { setProductSaving(false); }
   };
 
   const openEdit = (p: typeof productList[0]) => {
@@ -1372,9 +1434,12 @@ export default function Admin() {
     });
   };
 
-  const confirmDelete = (id: number, name: string) => {
+  const confirmDelete = async (id: number, name: string) => {
     if (window.confirm(`Delete "${name}"? This cannot be undone.`)) {
-      deleteProduct.mutate({ id });
+      setProductDeleting(id);
+      try { await deleteProduct(id); toast.success("Product deleted"); await loadProducts(); }
+      catch { toast.error("Failed to delete product"); }
+      finally { setProductDeleting(null); }
     }
   };
 
@@ -1464,11 +1529,9 @@ export default function Admin() {
                   const isDelisted = pAny.delisted ?? false;
                   const isOutOfStock = !p.inStock;
 
-                  const quickToggle = (field: string, value: boolean) => {
-                    updateProduct.mutate({ id: p.id, data: { [field]: value } as any }, {
-                      onSuccess: () => { toast.success("Product updated"); refetch(); },
-                      onError: () => toast.error("Update failed"),
-                    });
+                  const quickToggle = async (field: string, value: boolean) => {
+                    try { await updateProduct(p.id, { [field]: value } as any); toast.success("Product updated"); await loadProducts(); }
+                    catch { toast.error("Update failed"); }
                   };
 
                   return (
@@ -1569,7 +1632,7 @@ export default function Admin() {
                           </button>
                           <button
                             onClick={() => confirmDelete(p.id, p.name)}
-                            disabled={deleteProduct.isPending}
+                            disabled={productDeleting === p.id}
                             className="admin-btn-danger flex items-center justify-center gap-1.5 text-xs px-3"
                           >
                             <Trash2 size={11} />
@@ -1601,7 +1664,7 @@ export default function Admin() {
             initial={EMPTY_FORM}
             onClose={() => setShowModal(false)}
             onSave={handleSave}
-            isLoading={createProduct.isPending}
+            isLoading={productSaving}
           />
         )}
 
@@ -1611,7 +1674,7 @@ export default function Admin() {
             initial={editProduct}
             onClose={() => setEditProduct(null)}
             onSave={handleSave}
-            isLoading={updateProduct.isPending}
+            isLoading={productSaving}
           />
         )}
       </div>

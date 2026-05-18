@@ -131,6 +131,23 @@ export const membershipTiers = mysqlTable("membership_tiers", {
 export type MembershipTier = typeof membershipTiers.$inferSelect;
 export type InsertMembershipTier = typeof membershipTiers.$inferInsert;
 
+// ─── AI Videos ──────────────────────────────────────────────────────────────────
+export const aiVideos = mysqlTable("ai_videos", {
+  id: serial("id").primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  videoUrl: text("videoUrl").notNull(),
+  thumbnailUrl: text("thumbnailUrl"),
+  category: varchar("category", { length: 64 }).notNull().default("training"),
+  duration: varchar("duration", { length: 32 }),
+  published: boolean("published").notNull().default(false),
+  sortOrder: int("sortOrder").notNull().default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+export type AiVideo = typeof aiVideos.$inferSelect;
+export type InsertAiVideo = typeof aiVideos.$inferInsert;
+
 // ─── Site Settings ────────────────────────────────────────────────────────────
 export const siteSettings = mysqlTable("site_settings", {
   id: serial("id").primaryKey(),

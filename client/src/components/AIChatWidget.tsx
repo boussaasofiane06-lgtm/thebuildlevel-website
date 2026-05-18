@@ -4,7 +4,6 @@
    ========================================================================== */
 
 import { useState, useRef, useEffect } from "react";
-import { trpc } from "@/lib/trpc";
 import { MessageSquare, X, Send, Loader2 } from "lucide-react";
 
 type Message = { role: "user" | "assistant"; content: string };
@@ -27,20 +26,33 @@ export default function AIChatWidget() {
   });
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const { data: widgetConfig } = trpc.publicChat.getWidgetConfig.useQuery();
-  const sendMessage = trpc.publicChat.sendMessage.useMutation();
+  const [widgetEnabled, setWidgetEnabled] = useState(true);
+  const [greeting, setGreeting] = useState("Hi! How can I help you today?");
+  const [configLoaded, setConfigLoaded] = useState(false);
+
+  // Load widget config from REST API
+  useEffect(() => {
+    fetch("/api/chat/config")
+      .then(r => r.json())
+      .then(data => {
+        if (data.enabled === false) setWidgetEnabled(false);
+        if (data.greeting) setGreeting(data.greeting);
+        setConfigLoaded(true);
+      })
+      .catch(() => setConfigLoaded(true));
+  }, []);
 
   useEffect(() => {
-    if (open && messages.length === 0 && widgetConfig?.greeting) {
-      setMessages([{ role: "assistant", content: widgetConfig.greeting }]);
+    if (open && messages.length === 0 && configLoaded) {
+      setMessages([{ role: "assistant", content: greeting }]);
     }
-  }, [open, widgetConfig]);
+  }, [open, configLoaded]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  if (!widgetConfig?.enabled) return null;
+  if (!widgetEnabled) return null;
 
   const handleSend = async () => {
     const text = input.trim();
@@ -52,12 +64,13 @@ export default function AIChatWidget() {
     setSending(true);
 
     try {
-      const result = await sendMessage.mutateAsync({
-        sessionId,
-        message: text,
-        history: messages.slice(-6),
+      const res = await fetch("/api/chat/message", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId, message: text, history: messages.slice(-6) }),
       });
-      setMessages(prev => [...prev, { role: "assistant", content: result.reply }]);
+      const data = await res.json();
+      setMessages(prev => [...prev, { role: "assistant", content: data.reply || "Sorry, I couldn't process that." }]);
     } catch {
       setMessages(prev => [...prev, {
         role: "assistant",

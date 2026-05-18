@@ -1,54 +1,146 @@
 /* ==========================================================================
    BUILD LEVEL — Admin: AI Customer Service Tab
+   Uses REST API: /api/admin/ai-chat/*
    ========================================================================== */
 
 import { useState, useEffect } from "react";
-import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { MessageSquare, RefreshCw, Loader2, ToggleLeft, ToggleRight, Save, ChevronRight } from "lucide-react";
+
+const ADMIN_TOKEN_KEY = "bl_admin_token";
+
+function getAuthHeaders(): Record<string, string> {
+  const token = sessionStorage.getItem(ADMIN_TOKEN_KEY);
+  if (!token) return {};
+  if (token.startsWith("eyJ")) return { Authorization: `Bearer ${token}` };
+  return { "x-admin-token": token };
+}
+
+async function adminFetch<T>(method: string, path: string, body?: unknown): Promise<T> {
+  const res = await fetch(path, {
+    method,
+    credentials: "include",
+    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || `HTTP ${res.status}`);
+  }
+  return res.json() as Promise<T>;
+}
+
+interface ChatConfig {
+  enabled: boolean;
+  persona: string;
+  greeting: string;
+}
+
+interface ChatSession {
+  sessionId: string;
+  lastMessage: string;
+  messageCount: number;
+  lastActivity: string;
+}
+
+interface ChatMessage {
+  id: number;
+  role: string;
+  content: string;
+  createdAt: string;
+}
 
 export default function AIChatTab() {
   const [activeView, setActiveView] = useState<"config" | "history">("config");
   const [selectedSession, setSelectedSession] = useState<string | null>(null);
-  const [editingPersona, setEditingPersona] = useState(false);
+  const [config, setConfig] = useState<ChatConfig | null>(null);
+  const [configLoading, setConfigLoading] = useState(true);
   const [personaDraft, setPersonaDraft] = useState("");
   const [greetingDraft, setGreetingDraft] = useState("");
   const [savingConfig, setSavingConfig] = useState(false);
-
-  const { data: config, refetch: refetchConfig, isLoading: configLoading } = trpc.integrations.getAIChatConfig.useQuery();
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [sessionMessages, setSessionMessages] = useState<ChatMessage[]>([]);
+  const [messagesLoading, setMessagesLoading] = useState(false);
 
   useEffect(() => {
-    if (config && !editingPersona) {
-      setPersonaDraft(config.persona);
-      setGreetingDraft(config.greeting);
+    loadConfig();
+  }, []);
+
+  useEffect(() => {
+    if (activeView === "history") loadSessions();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeView]);
+
+  useEffect(() => {
+    if (selectedSession) loadMessages(selectedSession);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedSession]);
+
+  const loadConfig = async () => {
+    setConfigLoading(true);
+    try {
+      const data = await adminFetch<ChatConfig>("GET", "/api/admin/ai-chat/config");
+      setConfig(data);
+      setPersonaDraft(data.persona);
+      setGreetingDraft(data.greeting);
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed to load config");
+    } finally {
+      setConfigLoading(false);
     }
-  }, [config]);
+  };
 
-  const { data: sessions, isLoading: sessionsLoading, refetch: refetchSessions } = trpc.integrations.listChatSessions.useQuery(
-    { limit: 50 },
-    { enabled: activeView === "history" }
-  );
+  const loadSessions = async () => {
+    setSessionsLoading(true);
+    try {
+      const data = await adminFetch<{ sessions: ChatSession[] }>("GET", "/api/admin/ai-chat/sessions");
+      setSessions(data.sessions || []);
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed to load sessions");
+    } finally {
+      setSessionsLoading(false);
+    }
+  };
 
-  const { data: sessionMessages, isLoading: messagesLoading } = trpc.integrations.getChatSession.useQuery(
-    { sessionId: selectedSession! },
-    { enabled: !!selectedSession }
-  );
-
-  const updateConfig = trpc.integrations.updateAIChatConfig.useMutation({
-    onSuccess: () => { toast.success("Config saved!"); refetchConfig(); setEditingPersona(false); },
-    onError: (e) => toast.error(e.message),
-    onSettled: () => setSavingConfig(false),
-  });
+  const loadMessages = async (sessionId: string) => {
+    setMessagesLoading(true);
+    try {
+      const data = await adminFetch<{ messages: ChatMessage[] }>("GET", `/api/admin/ai-chat/sessions/${sessionId}`);
+      setSessionMessages(data.messages || []);
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed to load messages");
+    } finally {
+      setMessagesLoading(false);
+    }
+  };
 
   const handleToggle = async () => {
     if (!config) return;
     setSavingConfig(true);
-    await updateConfig.mutateAsync({ enabled: !config.enabled });
+    try {
+      await adminFetch("POST", "/api/admin/ai-chat/config", { ...config, enabled: !config.enabled });
+      setConfig(c => c ? { ...c, enabled: !c.enabled } : c);
+      toast.success(config.enabled ? "Chat widget disabled" : "Chat widget enabled!");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed to update");
+    } finally {
+      setSavingConfig(false);
+    }
   };
 
   const handleSaveConfig = async () => {
     setSavingConfig(true);
-    await updateConfig.mutateAsync({ persona: personaDraft, greeting: greetingDraft });
+    try {
+      const updated = { enabled: config?.enabled ?? false, persona: personaDraft, greeting: greetingDraft };
+      await adminFetch("POST", "/api/admin/ai-chat/config", updated);
+      setConfig(updated);
+      toast.success("Configuration saved!");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed to save");
+    } finally {
+      setSavingConfig(false);
+    }
   };
 
   return (
@@ -78,7 +170,7 @@ export default function AIChatTab() {
           { id: "config", label: "CONFIGURATION" },
           { id: "history", label: "CHAT HISTORY" },
         ].map(({ id, label }) => (
-          <button key={id} onClick={() => setActiveView(id as any)}
+          <button key={id} onClick={() => setActiveView(id as "config" | "history")}
             className={`px-5 py-3 font-display text-xs font-bold tracking-widest border-b-2 transition-colors ${
               activeView === id ? "border-[#FF6B00] text-white" : "border-transparent text-[#555] hover:text-[#888]"
             }`}>
@@ -123,7 +215,7 @@ export default function AIChatTab() {
                   value={greetingDraft}
                   onChange={e => setGreetingDraft(e.target.value)}
                   className="w-full bg-[#111] border border-white/10 text-white font-body text-sm px-3 py-2.5 outline-none focus:border-[#FF6B00]"
-                  placeholder="Hey! How can I help you today? 💪"
+                  placeholder="Hey! How can I help you today?"
                 />
               </div>
 
@@ -131,19 +223,16 @@ export default function AIChatTab() {
               <div className="bg-[#1A1A1A] border border-white/10 p-5">
                 <div className="flex items-center justify-between mb-2">
                   <label className="font-display text-[#888] text-[10px] tracking-widest">AI PERSONA & INSTRUCTIONS</label>
-                  <button onClick={() => setEditingPersona(true)} className="font-display text-[#FF6B00] text-[10px] tracking-widest hover:underline">
-                    EDIT
-                  </button>
                 </div>
                 <p className="font-body text-[#555] text-xs mb-3">
                   This is the system prompt that defines how the AI responds. Include info about shipping, returns, sizing, and products.
                 </p>
                 <textarea
                   value={personaDraft}
-                  onChange={e => { setPersonaDraft(e.target.value); setEditingPersona(true); }}
+                  onChange={e => setPersonaDraft(e.target.value)}
                   rows={10}
                   className="w-full bg-[#111] border border-white/10 text-white font-body text-xs px-3 py-2.5 outline-none focus:border-[#FF6B00] resize-y"
-                  placeholder="You are the BUILD LEVEL customer service assistant..."
+                  placeholder="You are the BUILD LEVEL customer service assistant. Be helpful, concise, and on-brand..."
                 />
               </div>
 
@@ -164,7 +253,7 @@ export default function AIChatTab() {
           <div className="w-72 flex-shrink-0">
             <div className="flex items-center justify-between mb-3">
               <p className="font-display text-[#888] text-[10px] tracking-widest">CONVERSATIONS</p>
-              <button onClick={() => refetchSessions()} className="text-[#555] hover:text-white">
+              <button onClick={loadSessions} className="text-[#555] hover:text-white">
                 <RefreshCw size={11} />
               </button>
             </div>
@@ -173,7 +262,7 @@ export default function AIChatTab() {
                 <Loader2 size={18} className="animate-spin text-[#FF6B00]" />
               </div>
             )}
-            {!sessionsLoading && sessions && (
+            {!sessionsLoading && (
               <div className="space-y-2">
                 {sessions.length === 0 && (
                   <div className="text-center py-8">
@@ -181,7 +270,7 @@ export default function AIChatTab() {
                     <p className="font-body text-[#555] text-xs">No conversations yet</p>
                   </div>
                 )}
-                {(sessions as any[]).map((s) => (
+                {sessions.map(s => (
                   <button
                     key={s.sessionId}
                     onClick={() => setSelectedSession(s.sessionId)}
@@ -229,9 +318,9 @@ export default function AIChatTab() {
                     <Loader2 size={18} className="animate-spin text-[#FF6B00]" />
                   </div>
                 )}
-                {!messagesLoading && sessionMessages && (
+                {!messagesLoading && (
                   <div className="space-y-3 max-h-96 overflow-y-auto">
-                    {(sessionMessages as any[]).map((m) => (
+                    {sessionMessages.map(m => (
                       <div key={m.id} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
                         <div className={`max-w-[80%] px-3 py-2 ${
                           m.role === "user"

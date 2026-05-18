@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS `ai_videos` (\n  `id` serial PRIMARY KEY NOT NULL,\n  `title` varchar(255) NOT NULL,\n  `description` text,\n  `videoUrl` text NOT NULL,\n  `thumbnailUrl` text,\n  `category` varchar(64) NOT NULL DEFAULT 'training',\n  `duration` varchar(32),\n  `published` boolean NOT NULL DEFAULT false,\n  `sortOrder` int NOT NULL DEFAULT 0,\n  `createdAt` timestamp NOT NULL DEFAULT (now()),\n  `updatedAt` timestamp NOT NULL DEFAULT (now())\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway06.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3yjy74Aq4fSfMvH.root --database ZpCxvttgRWUJYjQSvWcg6k --execute CREATE TABLE IF NOT EXISTS `ai_videos` (\n  `id` serial PRIMARY KEY NOT NULL,\n  `title` varchar(255) NOT NULL,\n  `description` text,\n  `videoUrl` text NOT NULL,\n  `thumbnailUrl` text,\n  `category` varchar(64) NOT NULL DEFAULT 'training',\n  `duration` varchar(32),\n  `published` boolean NOT NULL DEFAULT false,\n  `sortOrder` int NOT NULL DEFAULT 0,\n  `createdAt` timestamp NOT NULL DEFAULT (now()),\n  `updatedAt` timestamp NOT NULL DEFAULT (now())\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1467
+}
